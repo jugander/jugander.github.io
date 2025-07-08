@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN""http://www.w3.org/TR/html4/loose.dtd"> 
+<html> 
+<head> 
+	<title>Scholarfy | Google Scholar bookmarklet by Johan Ugander</title> 
+  <link rel="stylesheet" type="text/css" href="style_scholarfy.css"> 
+  <link rel="icon" type="image/vnd.microsoft.icon" href="http://www.stanford.edu/favicon.ico" /> 
+<meta property="og:title" content="Scholarfy | Reclaim Google Scholar" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Scholarfy is a simple bookmarklet to transfer Google/Bing search queries to Google Scholar, which was recently demoted to a third-tier service by the latest Google Bar redesign." />
+<meta property="og:url" content="http://people.cam.cornell.edu/~jugander/scholarfy.html" />
+<meta property="og:image" content="http://scholar.google.com/intl/en/images/scholar_logo_md_2011.gif" />
+<meta property="og:site_name" content="Scholarfy" />
+<meta property="fb:admins" content="706178" />
+<!--
+<meta property="fb:page_id" content="344469372254833" />
+-->
+</head> 
+ 
+<!-- Begin Google Analytics -->
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15325182-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+<!-- End Google Analytics -->
+ 
+<BODY bgcolor=ffffff alink=000000 vlink=000000 link=000000> 
+<div id="fb-root"></div>
+<!-- Begin Like widget code -->
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+<!-- End Like widge code -->
+
+<div id="outerbox">
+<div id="mainbox">
+
+<div id="contactbox">
+<div class="figure">
+<br><br>
+<iframe src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fwww.cam.cornell.edu%2F%7Ejugander%2Fscholarfy.html&amp;send=false&amp;layout=standard&amp;width=200&amp;show_faces=true&amp;action=like&amp;colorscheme=light&amp;font&amp;height=80" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:200px; height:80px;" allowTransparency="true"></iframe>
+</div>
+
+<h1>Scholarfy
+</h1>
+<h3>
+Reclaiming Google Scholar <br>
+<br>
+by Johan Ugander <br>
+jugander {at} stanford.edu
+</h3>
+</div>
+</div>
+</div>
+
+<!-- I stole the style sheets for this homepage from Renato Paes Leme. Thanks Renato! -->
+<!-- See here: http://www.cs.cornell.edu/~renatoppl/ -->
+
+<div id="outerbox" class="bd">
+<div id="mainbox" class="bd">
+<h2>Installation</h2>
+<center>
+To install, drag this link to your bookmark bar: 
+<br>
+<a href="javascript:location = 'http://scholar.google.com/scholar?q='+escape(document.forms[0].elements['q'].value);" onClick="javascript: pageTracker._trackPageview('/sfy/install');" >Scholarfy</a>
+</center>
+<h2>About</h2>
+<p class="bd">
+Scholarfy is a simple <a href="http://en.wikipedia.org/wiki/Bookmarklet" onClick="javascript: pageTracker._trackPageview('/sfy/WikiBookmarklet');">bookmarklet</a> to transfer Google/Bing search queries to <a href="http://scholar.google.com" onClick="javascript: pageTracker._trackPageview('/sfy/GoogleScholar');">Google Scholar</a>, which was recently demoted to a third-tier service by the latest <a href="http://googleblog.blogspot.com/2012/02/update-on-google-bar.html" onClick="javascript: pageTracker._trackPageview('/sfy/GoogleBlogPost');">Google Bar redesign</a>.
+<p class="bd">
+This restores how Google Scholar used to work: when searching the web for a query, switching to a scholar query was a one-click operation. When Scholar was demoted to being behind the 'Even more' sub-submenu, this functionality broke.
+<p class="bd">
+Scholarfy simply lifts the current search query out of the active Google/Bing search page and passes it to Google Scholar. By clicking the installed bookmarklet, your query will be effortlessly switched to a Google Scholar query. 
+<p class="bd">
+Scholarfy works in Chrome/Firefox, and is simple enough that I have a hard time imagining platforms where it wouldn't work. If you have suggestions on improvements, drop me a line at the email address above..! 
+
+<h2>Adaptations</h2>
+<p class="bd">
+C. Sean Burns contacted me to share his <a href="http://cseanburns.net/2012/03/02/scholarfy-openlibraryfy-worldcatify-merlinify/">generalization</a> of the bookmarklet to transfer queries to OpenLibrary, WorldCat, and other services. This is indeed a straightforward change, see the <a href="http://web.missouri.edu/~csbc74/#misc">Misc</a> section of his homepage for his adaptations.
+
+<h2>See also:</h2>
+<ul>
+<li>  <a href="http://stanford.edu/~jugander/bookmarklets/jstor.html"  onClick="javascript: pageTracker._trackPageview('/out/home2jstor')">JSTORpdf</a>: a bookmarklet I wrote to access PDFs faster on JSTOR.
+<li>  <a href="http://stanford.edu/~jugander/bookmarklets/googurl.html"  onClick="javascript: pageTracker._trackPageview('/out/home2googurl')">googURL</a>: a bookmarklet to circumvent some paywalls using Google.
+</ul>
+
+<!--
+<h2>About Me</h2>
+<p class="bd">
+I am a third  year Ph.D. student in the <a href="http://www.cam.cornell.edu"  onClick="javascript: pageTracker._trackPageview('/sfy/CAM');">Center for Applied Mathematics</a> at <a href="http://www.cornell.edu" onClick="javascript: pageTracker._trackPageview('/sfy/Cornell');">Cornell University</a>. I work on large-scale ('big data') problems at the intersection of graph theory, probability theory, optimization, dynamical systems, and algorithm design. My advisor is <a href="http://www.cs.cornell.edu/home/kleinber/" onClick="javascript: pageTracker._trackPageview('/sfy/Jon_Kleinberg');">Jon Kleinberg</a>.  Since the summer of 2010 I have also held an affiliation with the <a href="http://www.facebook.com/data" onClick="javascript: pageTracker._trackPageview('/sfy/Facebook_Data_Team');">Facebook Data Science</a> team as a continuing graduate research intern. 
+<p class="bd">
+More: Check out my <a href="http://www.cam.cornell.edu/~jugander/"  onClick="javascript: pageTracker._trackPageview('/sfy/homepage');">academic homepage</a>, or find me on <a href="https://www.facebook.com/jugander" onClick="javascript: pageTracker._trackPageview('/sfy/fb');">Facebook</a>, on <a href="https://www.twitter.com/jugander"  onClick="javascript: pageTracker._trackPageview('/sfy/twitter');">Twitter</a>, or on <a href="https://plus.google.com/103627885023009132042"  onClick="javascript: pageTracker._trackPageview('/sfy/gplus');">Google+</a>.
+-->
+
+</div>
+</div>
+<br>
+<br>
+<br>
+
+</font>
+</body> 
+</html> 
