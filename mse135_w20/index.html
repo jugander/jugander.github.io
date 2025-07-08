@@ -1,0 +1,506 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>MS&E135: Networks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    text-align: left;
+    padding: 8px;
+}
+
+tr:nth-child(odd){background-color: #f2f2f2}
+
+th {
+    background-color: #dddddd;
+    color: black;
+}
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="../assets/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="../assets/ico/favicon.png">
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">MS&E 135</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Description</a></li>
+              <li><a href="#lectures">Lectures</a></li>
+              <li><a href="#assignments">Assignments</a></li>
+              <li><a href="#syl">Syllabus Details</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+<h1>MS&E 135: Networks (Winter 2020)</h1>
+<h5>
+Lecture hours: Tu/Th, 9:00am-10:20am<br>
+Lecture hall: Hewlett 201<br>
+<br>
+Instructor: Johan Ugander, Assistant Professor, MS&E<br>
+Email: jugander [at] stanford<br>
+Office location: Huang 357<br>
+Office hours: Th 10:30-11:30<br>
+<br>
+TAs: Je-ok Choi, 
+Genevieve Selden, 
+Mobin Yahyazadeh<br>
+Email: jchoi89, gselden, yahyazad [at] stanford<br>
+<br>
+<u>TA office hours:</u><br>
+Monday 6:00p-7:50p, Huang 203 (Mobin)
+<br>
+Tuesday 12:30p-2:20p, McCullough 126 (Je-ok)
+<br>
+Wednesday 10:00a-11:50a, Huang B19 (Genevieve)
+</h5>
+<p class="bd">
+
+
+
+
+<h3>Course Description</h3>
+This course provides an introduction to how networks underly our social, technological, and natural worlds, with an emphasis on developing intuitions for broadly applicable concepts in network analysis. The course will include: an introduction to graph theory and graph concepts; social networks; information networks; the aggregate behavior of markets and crowds; network dynamics; information diffusion; the implications of popular concepts such as "six degrees of separation", the "friendship paradox", and the "wisdom of crowds". 
+</p>
+<u>
+Most important links:
+</u>
+<ul>
+<li><a href="https://canvas.stanford.edu/courses/111271">MS&E 135 on Canvas</a>
+<li><a href="http://web.stanford.edu/group/msande135/cgi-bin/wp/">MS&E 135 course blog</a> and <a href="http://web.stanford.edu/group/msande135/cgi-bin/wp/wp-login.php">blog author login page</a>
+<!--
+<li> <a href="./mse135-syllabus.pdf">Course syllabus</a> (PDF)
+-->
+</ul>
+
+
+
+
+
+</p>
+<h3 id='lectures'>Lectures</h3>
+
+<ul>
+<li>
+All reading is taken from Easley and Kleinberg, "Networks, Crowds, and Markets". The complete textbook is <a href="http://www.cs.cornell.edu/home/kleinber/networks-book/">available online</a> as a searchable PDF.
+</ul>
+
+<p class='bd'>
+<div id="schedule">
+<table width=100%>
+<col width="5%" />
+<col width="6%" />
+<col width="35%" />
+<col width="20%" />
+<col width="34%" />
+<thead>
+<tr>
+<th align="center">Week</th>
+<th align="left">Date</th>
+<th align="left">Topic</th>
+<th align="left">Reading</th>
+<th align="left">Assignments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">1</td>
+<td align="left">1/7</td>
+<td align="left">Course overview; Introduction to graph theory</td>
+<td align="left">Ch. 1, 2.1-2.3</td>
+<td align="left">Visit Canvas</td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">1/9</td>
+<td align="left">Strong and weak ties </td>
+<td align="left">Ch. 3.1-3.3</td>
+<td align="left">PS1 Out</td>
+</tr>
+
+<tr>
+<td align="center">2</td>
+<td align="left">1/14</td>
+<td align="left">Homophily, Affiliation; Friendship paradox</td>
+<td align="left">Ch. 4.1-4.3, <a href="http://opinionator.blogs.nytimes.com/2012/09/17/friends-you-can-count-on/">Friendship paradox</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">1/16</td>
+<td align="left">Structural Balance</td>
+<td align="left">Ch. 5.1-5.4</td>
+<td align="left">PS1 Due, PS2 Out</td>
+</tr>
+
+<tr>
+<td align="center">3</td>
+<td align="left">1/21</td>
+<td align="left">Game Theory</td>
+<td align="left">Ch. 6.1-6.9</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">1/23</td>
+<td align="left">Congestion, Auctions</td>
+<td align="left">Ch. 8.1-8.2, 9.1-9.2</td>
+<td align="left"></td>
+</tr>
+
+<tr>
+<td align="center">4</td>
+<td align="left">1/28</td>
+<td align="left">Matching Markets</td>
+<td align="left">Ch 9.3-9.6, 10.1-10.4</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">1/30</td>
+<td align="left">Bargaining & Power</td>
+<td align="left">Ch. 12.1-12.3, 12.5-12.8</td>
+<td align="left">PS2 Due, PS3 Out</td>
+</tr>
+
+<tr>
+<td align="center">5</td>
+<td align="left">2/4</td>
+<td align="left">The Web as a Network</td>
+<td align="left">Ch 13.1-13.5</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">2/6</td>
+<td align="left">Link Analysis</td>
+<td align="left">Ch. 14.1-14.3</td>
+<td align="left"></td>
+</tr>
+
+<tr>
+<td align="center">6</td>
+<td align="left">2/11</td>
+<td align="left">Web Search</td>
+<td align="left">Ch. 14.4-14.5</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">2/13</td>
+<td align="left">Sponsored Search as a Market</td>
+<td align="left">Ch 15.1-15.5</td>
+<td align="left">PS3 Due, PS4 Out</td>
+</tr>
+
+<tr>
+<td align="center">7</td>
+<td align="left">2/18</td>
+<td align="left">Information Cascades</td>
+<td align="left">Ch. 16.1-16.7</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">2/20</td>
+<td align="left">Network Effects, Cascading Behavior</td>
+<td align="left">Ch. 17.1-17.3, 19.1-19.4</td>
+<td align="left"></td>
+</tr>
+
+<tr>
+<td align="center">8</td>
+<td align="left">2/25</td>
+<td align="left">Rich-get-richer</td>
+<td align="left">Ch 18.1-18.6</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">2/27</td>
+<td align="left">Small Worlds</td>
+<td align="left">Ch. 20.1-20.6, <a href="https://research.facebook.com/blog/three-and-a-half-degrees-of-separation/">
+FB calculator</a></td>
+<td align="left">PS4 Due, PS5 Out</td>
+</tr>
+
+<tr>
+<td align="center">9</td>
+<td align="left">3/3</td>
+<td align="left">Epidemics</td>
+<td align="left">Ch 21.1-21.4, 21.6</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="left">3/5</td>
+<td align="left"><b>Guest Lecture: TBD</b></td>
+<td align="left"></td>
+<td align="left"></td>
+</tr>
+
+<tr>
+<td align="center">10</td>
+<td align="left">3/10</td>
+<!--
+<td align="left">Markets and Information</td>
+<td align="left">Ch. 22.1-22.9</td>
+-->
+<td align="left">Course review</td>
+<td align="left"></td>
+<td align="left"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="left">3/12</td>
+<!--
+<td align="left">Markets and Information</td>
+<td align="left">Ch. 22.1-22.9</td>
+-->
+
+<td align="left">Review practice exam</td>
+<td align="left"></td>
+
+<td align="left">PS5 Due, 10:30am</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<br>
+<br>
+
+<h3 id='assignments'>Problem Sets</h3>
+Problem sets are posted on Canvas, solutions will be posted to Canvas soon after the submission deadline.
+See the syllabus details (below) for detailed information about grading, late, and collaboration policy.
+<br>
+<br>
+
+<h3 id='blog'>Writing blog posts</h3>
+<p>
+All students will be required to write two short blog posts during the quarter, posted
+to a course blog and taking the form of a miniature reaction paper. 
+<br>
+<ul>
+<li><b>Link to the course blog</b>: <a href="https://msande135.stanford.edu/">https://msande135.stanford.edu/</a>
+<li><b>Author login page</b>: <a href="http://web.stanford.edu/group/msande135/cgi-bin/wp/wp-login.php">http://web.stanford.edu/group/msande135/cgi-bin/wp/wp-login.php</a>
+</ul>
+
+<u>Format:</u>
+<p>
+Each post should be centered around an recent news article, academic paper, online essay, new company or organization, and contain at least one web link on that subject. The goal is to provide commentary that gives context around the subject, targeted at your peers in the course (or similarly informed outsiders). Why do you think it interesting or relevant? The post should be at least two paragraphs.
+
+<p>
+One of the purposes of these writing assignments is to practice communicating your thoughts in a public forum (albeit anonymously, see the privacy discussion below). Your audience is each other, not just the course staff. Engage each other! Posts that dialogue with earlier posts from the course are encouraged, though should add significantly to the previous points made (in part by referencing a new news article/paper/essay).
+
+<p>
+You should keep in mind, as you write your posts, that if you refer to a company, organization,
+or research project in the outside world, the people you’re talking about may well end up reading what you write. Finally, adding inappropriate, rude, or disruptive content to the blog will result in a 0 for this part of the course grade, and (depending on the nature of the content) potentially stronger
+actions. Plagiarism is also not acceptable; the Honor Code applies.
+<br><br>
+
+<u>Grading:</u>
+<p>
+Posts will be graded on a 10 point scale based on their relevance to the class, novelty, and quality of the insights and writing. For blog posts (and blog posts only; the following policy does not apply to problem sets) late submissions (after Friday 11:59pm of the assigned week) will have 2 points deducted. Late submissions after Friday of Week 10 will not be considered and therefore given a 0/10 grade. Some posts will be mentioned and discussed in lectures. You are encouraged but not required to read the posts by your classmates.
+<br>
+<br>
+
+<u>Account creation and privacy:</u>
+<p>
+No student will be required to make their identity public as part of these assignments. During the first week each student will be randomly assigned to an ID number between 100 and 499. You will be emailed instructions for how to log in to your account. If you have any problems with your blog account, please email Je-ok.
+<p>
+The course staff will keep a private record of the user names and the corresponding real names for purposes of grading. Nothing prevents you from including your real names in the text of a post, if you choose to do so, but please do not mention other students by name as a blanket policy. You are free to mention the instructor or TAs (e.g.: "Professor Ugander mentioned on Thursday that...").
+<p>
+If you join the class late, please email Je-ok to obtain an account ID.
+<br>
+<br>
+
+<u>Scheduling:</u> To space out the post traffic, students are assigned "deadline weeks" at random, based on the ID number they are assigned for the class. You are responsible for submitting a blog post before Friday 11:59pm of the weeks you are assigned. If your number is 127, your ID falls in the range 100-199 and your deadlines are week 2 and week 6. You may of course submit your blog posts before the week they are due. 
+
+<center>
+<p class='bd'>
+<div id="schedule" width="50%">
+<table>
+<col width="200px" />
+<col width="100px" />
+<col width="200px" />
+<thead>
+<tr>
+<th align="center">ID range</th>
+<th align="center">Weeks</th>
+<th align="left">Deadlines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">100-199</td>
+<td align="center">2, 6</td>
+<td align="center">Jan 17, Feb 14</td>
+</tr>
+<tr>
+<td align="left">200-299</td>
+<td align="center">3, 7</td>
+<td align="center">Jan 24, Feb 21</td>
+</tr>
+<tr>
+<td align="left">300-399</td>
+<td align="center">4, 8</td>
+<td align="center">Jan 31, Feb 28</td>
+</tr>
+<tr>
+<td align="left">400-499</td>
+<td align="center">5, 9</td>
+<td align="center">Feb 7, March 6</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+</center>
+<br>
+
+<u>
+Inspiration:</u>
+<p>
+Feel free to browse posts from previous years for inspiration, though the central stories for your commentaries should not come from this blog or any other similar course blog.
+<br>
+
+<br>
+
+<h3 id='syl'>Syllabus Details</h3>
+
+
+<p class='bd'>
+<u>Learning goals</u>
+<ul>
+<li>Understand basic graph theory and network analysis
+<li>Understand basic game theory and strategic behavior
+<li>Develop a quantitative and qualitative intuition for the role of networks in social and technological systems.
+</ul>
+
+<p class='bd'>
+<u>Prerequisites</u>
+<ul>
+<li>
+Almost no prior mathematical knowledge is assumed other than some basic probability (random variables, expectation, independence), which we will briefly review when it first arises. The course focuses on building intuitions. Many of the problems discusses are given a more formal treatment in higher-level classes at Stanford. I will try to connect to those classes when applicable.
+</ul>
+
+<p class='bd'>
+<u>Material</u>
+<ul>
+<li>Easley and Kleinberg, Networks, Crowds, and Markets, Cambridge University Press, 2010<br>
+The complete textbook is <a href="http://www.cs.cornell.edu/home/kleinber/networks-book/">available online</a> as a free PDF, but can also be ordered as a reasonably priced hardcover.
+</ul>
+
+<u>Problem Set Rules</u>
+<ul>
+<li>All problem sets are to be submitted during the corresponding lecture day. If you're not able to attend a class then the problem sets can be submitted before class (Thursdays 10:30am) in the homework slot in the basement of Huang.
+<li><b>Collaboration policy</b>: You may discuss the problem sets with other students in the class, but since the goal is
+to practice skills, the actual writing up of the solutions must be done separately. In
+particular, this means that your solution should not word-for-word resemble another
+student's. In short, students are expected to abide by Stanford’s honor code.
+<li><b>Late Policy</b>: No late assignments will be accepted. 
+<li><b>Grading</b>: The lowest problem set grade will be dropped, and the remaining problem sets will recieve equal weight.
+<li>Effectively the last two bullets mean that if you are unable to submit one problem set by the deadline, you will be "dropping" that problem set and graded on the remaining 4 problem sets. It's not advisable to miss more than one deadline.
+<li>Extreme circumstances: email or come see me, I am a reasonable human being.
+</ul>
+
+<u>
+Final exam
+</u>
+<ul>
+<li>The exam will be Wednesday, March 18th, 8:30-11:30. 
+</ul>
+
+<u>Evaluation</u>
+<ul>
+<li>Problem sets (50%)
+<li>Blog posts (10%)
+<li>Collegiality (5%)
+<li>Final (35%)
+</ul>
+
+<u>
+Students with Documented Disabilities
+</u>
+<br>
+Students who may need an academic accommodation based on the impact of a
+disability must initiate the request with the Office of Accessible Education (OAE).
+Professional staff will evaluate the request with required documentation, recommend
+reasonable accommodations, and prepare an Accommodation Letter for faculty dated in
+the current quarter in which the request is made. Students should contact the OAE as
+soon as possible since timely notice is needed to coordinate accommodations. For more
+information: <a href="http://studentaffairs.stanford.edu/oae">http://studentaffairs.stanford.edu/oae</a>
+<!--
+<br><br>
+<h3 id='software'>Tools and Data</h3>
+
+Here are some libraries that might be useful for the problem sets and projects:
+<ul>
+<li>
+<a href="https://networkx.github.io/">NetworkX</a> (Python), 
+<a href="https://graph-tool.skewed.de/">graph-tool</a> (Python), 
+<a href="http://snap.stanford.edu/snappy/index.html">SNAP</a> (C++, Python), <a href="http://igraph.org/">igraph</a> (R, python, C)
+</ul>
+
+<p>
+Some data sources:
+<ul>
+<li> <a href="http://snap.stanford.edu/data/index.html">SNAP network datasets</a>
+<li> <a href="http://web.stanford.edu/class/cs224w/resources.html">Datasets from CS224W</a>
+</ul>
+-->
+
+<br><br><br><br>
+<br><br><br><br>
+
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/bootstrap-min.js"></script>
+
+  </body>
+</html>
+

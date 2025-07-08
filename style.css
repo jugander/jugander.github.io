@@ -1,0 +1,193 @@
+body { 	
+  font-family: Arial;
+  font-size: 10pt;
+  color: #333333;
+  /*background-color: #afbcca;  #d8d5e8 #aabccf #b4ccd4*/ 
+  background-color: #f6f6f6; 
+  line-height : 1.3em;
+  text-align : center; /* for IE */
+  margin:0px auto;       /* for others */
+}
+
+p.bd {
+  font-family: Arial;
+  font-size: 10pt;
+  color: #333333;
+}
+
+p.publist {
+  text-indent : -20px;
+  padding-left : 20px
+}
+
+
+
+
+a.nav:link, a.nav:visited, a.nav:active
+{
+
+  float:left;
+  /* width:20%; */
+  padding:0 1em 0 1em;
+  margin:0;
+  text-decoration:none;
+  background-color:#ffffff;
+  color:#000000;
+  border-left: 1px solid #000000
+}
+
+a.nav:hover
+{
+
+  float:left;
+  /* width:20%; */
+  padding:0 1em 0 1em;
+  margin:0;
+  text-decoration:none;
+  background-color:#06274c;
+  color:#FFFFff;
+  border-left: 1px solid #000000
+  /* border-right: 1px solid #000000 */
+}
+
+h1 { 
+  font-size : 18pt; 
+  font-weight : bold; 
+  color: #333333;
+}
+
+h2 {
+  font-size : 12pt;
+  font-weight : bold;
+  color: #333333;
+}
+
+h3 {
+  font-size : 10pt;
+  font-weight : bold;
+  color: #333333;
+}
+
+h4 {
+  font-size : 8pt;
+  color: #333333;
+}
+
+
+/* Consider playing around with this:
+http://nicolasgallagher.com/css-drop-shadows-without-images/demo/
+.drop-shadow {
+            position:relative;
+            float:left;
+            width:40%;    
+            padding:1em; 
+            margin:2em 10px 4em; 
+            background:#fff;
+            -webkit-box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+               -moz-box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+                    box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+        }
+
+
+.drop-shadow:before,
+        .drop-shadow:after {
+            content:"";
+            position:absolute; 
+            z-index:-2;
+        }
+        
+        .drop-shadow p {
+            font-size:16px;
+            font-weight:bold;
+        }
+*/
+
+#outerbox {
+  width: 915px;
+  margin:0px auto;
+  padding-top : 40px;
+  border: 0px black solid;
+  background-color: #f6f6f6;
+  text-align: justify;
+}
+#outerbox2 {
+  width: 750px;
+  margin:0px auto;
+  padding-top : 40px;
+  border: 0px black solid;
+  background-color: #f6f6f6;
+  text-align: justify;
+}
+#contactbox {
+  text-align : center;	
+  padding-left : 0px;
+  padding-right : 0px; 
+  padding-top : 0px; 
+  padding-bottom : 0px;
+  border: none; 
+  background-color: #ffffff;
+}
+
+#mainbox {
+  border: 1px black solid;
+  min-height: 235px;
+  padding-left : 40px;
+  padding-right : 40px; 
+  padding-top : 30px; 
+  padding-bottom : 10px;
+  text-align : justify;
+  background-color: #ffffff;
+  clear : left ; 
+
+ }
+
+ul {
+  list-style-type: square;
+}
+
+a {	
+  color: #0000bb; 
+  text-decoration: none; 
+  border: 1px solid transparent;
+}
+
+a:hover { 
+  /*background-color: #eee;
+  border: 1px solid #ccc;*/
+  color: #1a76dd;
+  text-decoration:underline;
+}
+
+
+.imgright {
+  border: 0px black solid;
+  text-align: right;
+  float: right;
+  margin-top : 0px;
+  margin-right : 0px;
+  margin-bottom : 0px;
+  margin-left : 0px;
+}
+
+.imgleft {
+  border: 1px black solid;
+  text-align: left;
+  float: center;
+  margin-top : 0px;
+  margin-right : 35px;
+  margin-bottom : 0px;
+  margin-left : 0px;
+}
+
+div.figure {
+  float: right;
+  border: 0px black solid;
+  padding: 0px;
+}
+
+div.figure p {
+  text-align: right;
+  font-style: italic;
+  font-size: smaller;
+  text-indent: 0;
+}

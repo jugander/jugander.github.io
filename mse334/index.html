@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>MS&E334: Topics in Social  Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="../assets/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="../assets/ico/favicon.png">
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">Johan Ugander</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Description</a></li>
+              <li><a href="#lectures">Lectures</a></li>
+              <li><a href="#software">Tools and Data</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+<h1>MS&E334: Topics in Social Data (Spring 2022)</h1>
+<h5>
+Johan Ugander, Assistant Professor, MS&E<br>
+Email: jugander [at] stanford<br>
+Office location: Huang 357<br>
+Office Hours: by appointment<br>
+<br>
+Lecture hours: Fr 1:30-4:30p<br>
+Lecture room: Thornton 110<br>
+</h5>
+<p class="bd">
+
+
+<h3>Course Description</h3>
+<!-- This course provides a in-depth survey of methods research for the analysis of large-scale social and behavioral data. There will be a particular focus on recent developments in discrete choice theory and preference learning. Connections will be made to graph-theoretic investigations common in the study of social networks. Topics will include random utility models, item-response theory, ranking and learning to rank, centrality and ranking on graphs, and random graphs. The course is intended for Ph.D. students, but masters students with an interested in research topics are welcome. Recommended: 221, 226, CS161, or equivalents.
+-->
+In-depth survey of methods for the analysis of large-scale social and behavioral data. Particular focus on recent developments in preference learning. Connections made to graph-theoretic investigations common in the study of social networks. Topics include discrete choice theory, random utility models, item-response theory, rank aggregation, centrality and ranking on graphs, and random graph models of social networks. Intended for Ph.D. students, but masters students with adequate background and interest in research topics are welcome to apply. Strongly recommended: 200-level courses in stochastic modeling (most specifically, Markov chains), optimization, and machine learning (e.g., MS&E 211, 221, 226, and CS161 or equivalents). Limited enrollment.
+
+</p>
+Most important links:
+<ul>
+<!-- <li> <a href="./mse334-syllabus2018.pdf">2018 course syllabus</a> (PDF)
+-->
+<li> <a href="https://canvas.stanford.edu/courses/89465">MS&E334 on Canvas</a>
+
+</ul>
+
+<!--
+<u>Evaluation:</u>
+<ul>
+<li>2 problem sets (20% each)
+<li>reaction paper (20%)
+<li>project proposal + project (40%)
+</ul>
+
+<p class='bd'>
+<u>Prerequisites:</u>
+<br>
+This course is intended for doctoral students, and an adequate mathematical and programming background is mandatory. The course will assume a solid background in probability, statistics, algorithms, graphs, and linear algebra, as well as basic programming experience (the ability to manipulate network datasets).
+</p>
+-->
+
+<p class='bd'>
+<u>Basic overview:</u>
+<br>
+
+Week 1 (4/1): Graphs and graph properties. Simple graphs, multigraphs, sampling of results in extremal graph theory. Structural empirics. 
+Week 2 (4/8): Random graphs. Configuration model, growth models including preferential attachment, Chung-lu, and others. Introduce block models. 
+Week 3 (4/15): Centrality on graphs, centrality as a ranking problem. 
+Week 4 (4/22): Pairwise comparisons, ranking from pairwise comparisons, choice modelling 
+Week 5 (4/29): Choices in context, choice beyond IIA 
+Week 6 (5/6): Ranked data, permutations, triangle queries, metric learning from comparisons 
+Week 7 (5/13): Block models. Mixed membership, degree-corrected, multilayer, etc. 
+Week 8 (5/20): Trees and diffusion cascade data
+Week 9 (5/27): Respondent-driven sampling (RDS), network scale-up method 
+Week 10 (6/3): Project Presentations
+</p>
+
+<p class='bd'>
+Some topics may receive a longer or shorter treatments depending on audience interest at the onset of the course. A detailed list of references will be posted on the course homepage as the course progresses.
+</p>
+<br>
+
+<br>
+
+<h3 id='lectures'>Lecture material</h3>
+
+<p class='bd'>
+The literature below lays the foundation for the lecture material, though only a handful of papers will be discussed in depth. If you have a focused interests in specific papers, feel free to come discuss them with me during office hours. The reference list will almost certainly be expanded in response to class discussions as the course progresses.
+<br>
+
+<h4>
+Week 1
+</h4>
+
+</h5>
+<p>A review of graph definitions and properties. Graph invariants. Graphical degree sequences. Combinatorial constraints on graphs.</p>
+
+Graph structure:
+<ul>
+<li> MEJ Newman (2003) "The structure and function of complex networks," SIAM Review 45, 167-256.
+</ul>
+
+Combinatorial constraints:
+<ul>
+<li> S.L. Hakimi (1962) "On realizability of a set of integers as degrees of the vertices of a linear graph. I", J. SIAM, 10:3, p. 496.
+<li> Havel-Hakimi game: [<a href="http://jacquerie.github.io/hh/">link</a>]
+<li> N Alon, M Krivelevich (2010) "Extremal and Probabilistic
+Combinatorics", Princeton Companion to Mathematics. [<a href="http://www.tau.ac.il/~nogaa/PDFS/epc7.pdf">link</a>]
+<li> A Razborov (2008) "On the minimal density of triangles in graphs," Combinatorics, Probability and Computing.
+<li> J Ugander, L Backstrom, J Kleinberg (2013) "Subgraph Frequencies: Mapping the Empirical and Extremal Geography of Large Graph Collections", WWW. [<a href="http://stanford.edu/~jugander/papers/www13-subgraphs.pdf">link</a>]
+
+</ul>
+
+
+
+<br><br>
+<h4>
+Week 2
+</h4>
+
+<p> A broad tour of random graph models. Configuration models (uniform distributions over specific spaces of graphs), Preferential Attachment models, power law degree sequences, stochastic block models, ERGMs.
+<br>
+
+Configuration models:
+<ul>
+<li> J. Blitzstein, P. Diaconis (2011) "A sequential importance sampling algorithm for generating random graphs with prescribed degrees", Internet Mathematics.
+<li> B. Fosdick, D. Larremore, J. Nishimura, J. Ugander (2018) 
+"Configuring Random Graph Models with Fixed Degree Sequences," SIAM Review 60(2):315–355. 
+[<a href="https://arxiv.org/abs/1608.00607">link</a>]
+[<a href="https://github.com/joelnish/double-edge-swap-mcmc">code</a>]
+</ul>
+
+Power Law literature:
+<ul>
+<li>	M. Faloutsos, P. Faloutsos, C. Faloutsos (1999). "On power-law relationships of the internet topology", SIGCOMM.
+<li>	M. Mitzenmacher (2004), "A Brief History of Generative Models for Power Law and Lognormal Distributions", Internet Mathematics, vol 1, No. 2, pp. 226-251. [<a href="http://projecteuclid.org/euclid.im/1089229510">link</a>]
+<li>	M.E.J. Newman (2005), "Power laws, Pareto distributions and Zipf's law", Contemporary Physics. [<a href="http://arxiv.org/abs/cond-mat/0412004">link</a>]
+<li>	A. Clauset, C. Shalizi, M.E.J. Newman (2009), "Power-law distributions in empirical data", SIAM Review. [<a href="http://arxiv.org/abs/0706.1062">link</a>]
+</ul>
+
+Other growth models:
+<ul>
+<li>	A.-L. Barabasi, R. Albert (1999). "Emergence of scaling in random networks", Science.
+<li>	D. Callaway, J. Hopcroft, J. Kleinberg, M.E.J. Newman, S. Strogatz (2001). “Are randomly grown graphs really random?” Physical Review E. [<a href="http://arxiv.org/pdf/cond-mat/0104546.pdf">link</a>]
+<li>	D. Liben-Nowell, C. Knipe, C. Coalson (2013). “Indifferent Attachment: The Role of Degree in Ranking Friends”, ASONAM. [<a href="http://cs.carleton.edu/faculty/dlibenno/papers/indifferent-attachment/paper.pdf">link</a>]
+<li> J. Bagrow, D. Brockmann (2013) "Natural Emergence of Clusters and Bursts in Network Evolution", Phys Rev X. [<a href="http://bagrow.com/pdf/PhysRevX.3.021016.pdf">link</a>]
+</ul>
+
+<!--
+Not discussed: Benford's Law, another "law" that in fact has a rigorous (if and only if) characterization that is directly related to scale-free distributions.
+<ul>
+<li>	S. Newcomb. (1881), “Note on the frequency of use of the different digits in natural numbers.” Amer. J Math. 4 39-40. 
+<li>	F. Benford (1938), “The law of anomalous numbers.” Proceedings of the American Philosophical Society 78 551-572, 1938.
+<li>	T.P. Hill (1995), “A statistical derivation of the significant-digit law.” Statistical Science, 10:4, p. 354-363.
+<li>	Mark Nigrini (2012), “Benford's Law: Applications for forensic accounting, auditing, and fraud detection”, John Wiley & Sons (Book).
+<li>	Radiolab episode: Numbers (2009) [<a href="http://www.radiolab.org/story/91697-numbers/">link</a>]
+</ul>
+-->
+
+SBMs:
+<ul>
+<li>  P. W. Holland, K. B. Laskey, S. Leinhardt (1983) "Stochastic Blockmodels: First Steps," Social Networks.
+<li>E. M. Airoldi, D. M. Blei, S. E. Fienberg, E. P. Xing (2008) "Mixed membership stochastic blockmodels," JMLR.
+<li> B. Karrer, M.E.J. Newman (2011) "Stochastic blockmodels and community structure in networks," Physical Review E.
+</ul>
+
+Planted partition model:
+<ul>
+<li> A. Condon, D. Karp (2001) "Algorithms for graph partitioning on the planted partition model", Random Structure and Algorithms. (Extended abstract in RANDOM'99, August, 1999).
+<li> F. McSherry (2001) "Spectral Partitioning of Random Graphs", FOCS.
+</ul>
+
+ERGMs:
+<ul>
+<li> G. Robins, P. Pattison, Y. Kalish, D. Lusher (2007). "An introduction to exponential random graph models for social networks". Social Networks 29: 173--191.
+<li> S. Bhamidi, G. Bresler, A. Sly (2008) "Mixing time of exponential random graphs", FOCS.
+<li> S. Chatterjee, P. Diaconis (2013) "Estimating and understanding exponential random graph models", Annals of Statistics.
+</ul>
+
+Even more models:
+<ul>
+<li> W. Aiello, F. Chung, L. Lu (2000) "A random graph model for massive graphs", STOC/PNAS.
+<li> P. D. Hoff, A. E. Raftery, M. S. Handcock. (2002) "Latent Space Approaches to Social Network Analysis." JASA.
+<li> S. J. Young, E. Scheinerman. (2007) "Random dot product graph models for social networks", International Workshop on Algorithms and Models for the Web-Graph.
+<li> A. Athreya et al. (2017) "Statistical inference on random dot product graphs: a survey", arXiv. [<a href="https://arxiv.org/pdf/1709.05454.pdf">link</a>]
+<li> S. Lattanzi, D. Sivakumar (2009) "Affiliation Networks." STOC.
+<li> J. Pfeiffer III, S. Moreno, T. La Fond, J. Neville, B. Gallagher. (2014) "Attributed Graph Models: Modeling network structure with correlated attributes." WWW.
+</ul>
+
+
+<br><br>
+<h4>
+Week 3
+</h4>
+
+<p>
+Katz, Bonacich, Eigenvector, PageRank, Betweenness, Harmonic centrality. Personalized variations.</p>
+Foundational papers:
+<ul>
+<li>	L. Katz (1953) "A new status index derived from sociometric analysis." Psychometrika, 18(1), 39-43.
+<li>	P. Bonacich (1987) "Power and centrality: A family of measures." American Journal of Sociology, p. 1170-1182.
+<li>	L. Page, S. Brin, R. Motwani, T. Winograd (1999) "The PageRank citation ranking: Bringing order to the web", Stanford InfoLab.
+<li>    A. Ng, A. Zheng, M. Jordan (2001) "Link Analysis, Eigenvectors and Stability", IJCAI. [<a href="http://ai.stanford.edu/~ang/papers/ijcai01-linkanalysis.pdf">link</a>]
+</ul>
+More recent perspectives:
+<ul>
+<li>	P. Boldi, S. Vigna (2014), "Axioms for Centrality", Internet Mathematics 10, p. 222-262.
+<li>	S. Vigna (2015) "A Weighted Correlation Index for Rankings with Ties", Proceedings of WWW. 
+<li>	T. Martin, X. Zhang, M.E.J. Newman (2014) "Localization and centrality in networks", Phys Rev E.
+<li>	D. Gleich (2015) "PageRank Beyond the Web", SIAM Review 57:3, pp. 321-363. [<a href="http://epubs.siam.org/doi/abs/10.1137/140976649">link</a>]
+</ul>
+Centrality, personalized:
+<ul>
+<li> G. Jeh, J. Widom (2003) "Scaling personalized web search", Proceedings of WWW.
+<li> K. Kloster, D.F. Gleich  (2014) "Heat kernel based community detection", Proceedings of KDD.
+<li> I. Kloumann, J. Ugander, J. Kleinberg (2017) "Block Models and Personalized PageRank", PNAS. [<a href="http://www.pnas.org/content/114/1/33.abstract">link</a>]
+</ul>
+
+
+<br><br>
+<h4>
+Week 4
+</h4>
+
+<p>
+Thurstone and Bradley-Terry-Luce models; Random Utility Models; Elo ratings; Item-response theory; Markov chain models. 
+</p>
+
+<ul>
+<li> L. L. Thurstone (1927) “A law of comparative judgment,” Psychological Review.
+<li> M. Glickman (1999) “Parameter estimation in large dynamic paired comparison experiments,” J Royal Statistical Society C.
+<li> R. Herbrich, T. Minka, T. Graepel (2006) "Trueskill: A Bayesian skill rating system", NIPS.
+<li> D. Hunter (2004) "MM Algorithms for Generalized Bradley-Terry Models", Annals of Statistics. [<a href="http://projecteuclid.org/euclid.aos/1079120141">link</a>]
+<li> K. Tsukida, M. Gupta (2011) "How to Analyze Paired Comparison Data", University of Washington Tech Report # UW-EE-2011-0004. [<a href="http://mayagupta.org/publications/PairedComparisonTutorialTsukidaGupta.pdf">link</a>]
+</ul>
+Markov chain models:
+<ul>
+<li> S. Negahban, S. Oh, D. Shah (2012) "Rank Centrality: Ranking from Pair-wise Comparisons," arXiv. [<a href="http://arxiv.org/abs/1209.1688">link</a>]
+<li> L. Maystre, M. Grossglauser (2015) "Fast and accurate inference of Plackett-Luce models," NIPS. [<a href="http://papers.nips.cc/paper/5681-fast-and-accurate-inference-of-plackettluce-models.pdf">link</a>]
+<li> S. Ragain, J. Ugander (2016) "Pairwise Choice Markov Chains," NIPS. [<a href="http://web.stanford.edu/~jugander/papers/nips16-pcmc.pdf">link</a>]
+<li> J. Blanchet, G. Gallego, V. Goyal (2016) "A Markov chain approximation to choice modeling", Operations Research [<a href="http://pubsonline.informs.org/doi/abs/10.1287/opre.2016.1505">link</a>]
+<li>S. Ieong, N Mishra, O. Sheffet (2012) "Predicting Preference Flips in Commerce Search," ICML. [<a href="http://theory.stanford.edu/~nmishra/Papers/predictingPreferenceFlipsCommerceSearch.pdf">link</a>]
+<li>L. Maystre, M. Grosslgauser (2017) "ChoiceRank: Identifying Preferences from Node Traffic in Networks", ICML. [<a href="https://arxiv.org/abs/1610.06525">link</a>]
+<li> R. Kumar, A. Tomkins, S. Vassilvitskii, E. Vee (2015) "Inverting a Steady State," WSDM. [<a href="https://dl.acm.org/citation.cfm?id=2685310">link</a>]
+</ul>
+
+
+
+Example applications:
+<ul>
+<!-- <li>	C. Danescu-Niculescu-Mizil, J. Cheng, J. Kleinberg, L. Lee (2012) “You had me at hello: How phrasing affects memorability”, Proceedings of ACL.
+-->
+<li>    Y. Sismanis (2010) "How I won the `Chess Ratings - Elo vs the Rest of the World' Competition," arXiv. [<a href="http://arxiv.org/abs/1012.4571">link</a>]
+<li>	D. Shahaf, E. Horvitz, R. Mankoff (2015) “Inside Jokes: Identifying Humorous Cartoon Captions” KDD. [<a href="http://research.microsoft.com/en-us/um/people/horvitz/phumor.pdf">link</a>]
+</ul>
+
+Other methods that seek status embeddings:
+<ul>
+<li> B. Ball, M. E. J. Newman (2013) "Friendship networks and social status", Network Science. [<a href="http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=8888771&fileId=S2050124212000045">link</a>]
+
+</ul>
+
+<br><br>
+<h4>
+Week 5
+</h4>
+
+The Mallows model, Plackett-Luce, Rank Aggregation, Self-organizing lists
+<ul>
+<li>H.D. Block, J. Marschak (1960) "Random orderings and stochastic theories of responses," Contributions to Probability and Statistics.
+<li>C. Dwork, R. Kumar, M. Naor, D. Sivakumar (2001) "Rank aggregation methods for the Web", WWW.
+<li>M. Braverman, E. Mossel (2009) "Sorting from Noisy Information", arXiv. [<a href="https://arxiv.org/abs/0910.1191">link</a>]
+<li>F. Chierichetti, A. Dasgupta, R. Kumar, S. Lattanzi (2015) "On Learning Mixture Models for Permutations", ITCS.
+<li>T. Qin, X. Geng, T.Y. Liu (2010) "A new probabilistic model for rank aggregation," NIPS.
+<li>T. Joachims (2002) "Optimizing Search Engines using Clickthrough Data", KDD.
+<li>T.Y. Liu (2009) "Learning to rank for information retrieval", Foundations and Trends in Information Retrieval.
+
+</ul>
+
+
+<!--
+<h5>
+Lecture 10: The friendship paradox (10/27)
+</h5>
+Friendship paradox literature:
+<ul>
+<li>	S. L. Feld (1991). “Why your friends have more friends than you do.” American Journal of Sociology, p. 1464-1477.
+<li>	J. Ugander, B. Karrer, L. Backstrom, C. Marlow (2011) “The Anatomy of the Facebook Social Graph,” arXiv.
+<li>	F. Kooti, N. O. Hodas, K. Lerman (2014) “Network Weirdness: Exploring the Origins of Network Paradoxes”, Proceedings of ICWSM.
+<li>	S. Lattanzi, Y. Singer (2015). “The Power of Random Neighbors in Social Networks” Proceedings of WSDM.
+</ul>
+Applications of the friendship paradox:
+<ul>
+<li>	R. Pastor-Satorras, A. Vespignani (2002) “Immunization of complex networks.” Phys Rev E; 65: 036104.
+<li>	N. A. Christakis, J. H. Fowler (2010) “Social network sensors for early detection of contagious outbreaks", PLOS One.
+<li>	D. A. Kim et al. (2015) “Social network targeting to maximise population behaviour change: a cluster randomised controlled trial”, The Lancet.
+</ul>
+-->
+<!--
+<li>	Other structural results: extremal graph theory, subgraph frequencies, assortativity. 
+<li>	Structural-cut off for assortativity
+<li>	Noga Alon, Michael Krivelevich. "Extremal and Probabilistic Combinatorics", Princeton Companion to Mathematics, 2008. http://www.tau.ac.il/~nogaa/PDFS/epc7.pdf
+-->
+
+
+<br><br>
+<h4>
+Week 6
+</h4>
+
+Models of social processes: influence and contagion
+
+<ul>
+<li> M. Granovetter (1978) "Threshold Models of Collective Behavior", AJS.
+<li> D. McAdam (1986) "Recruitment to high-risk activism: The case of freedom summer", AJS.
+<li> J. Kleinberg (2007) "Cascading Behavior in Networks: Algorithmic and Economic Issues" in Algorithmic Game Theory (book chapter) [<a href="http://www.cs.cornell.edu/home/kleinber/agtbook-ch24.pdf">link</a>]
+<li> S. Aral, D. Walker (2012) "Identifying influential and susceptible members of social networks", Science.
+<li> B. State, L. Adamic (2015) "The Diffusion of Support in an Online Social Movement: Evidence from the Adoption of Equal-Sign Profile Pictures", CSCW.
+</ul>
+
+<ul>
+<li> D. Kempe, J. Kleinberg, E. Tardos (2003) "Maximizing the spread of influence through a social network", Proceedings of KDD. [<a href="http://www.cs.cornell.edu/home/kleinber/kdd03-inf.pdf">2003 KDD version</a>, <a href="http://theoryofcomputing.org/articles/v011a004/">2015 journal version</a>] 
+
+<li> D. Centola, M. Macy (2007) "Complex contagions and the weakness of long ties", AJS.
+<li> D. Centola (2010) "The spread of behavior in an online social network experiment", Science.
+<li> D. Centola (2011) "An experimental study of homophily in the adoption of health behavior", Science.
+<li> J. Ugander, L. Backstrom, C. Marlow, J. Kleinberg. (2012) "Structural Diversity in Social Contagion", PNAS.
+<li> S. Aral, L. Muchnik, A. Sundararajan (2009) "Distinguishing influence-based contagion from homophily-driven diffusion in dynamic networks", PNAS.
+</ul>
+
+<br><br>
+<h4>
+Week 7
+</h4>
+
+Causal inference under interference.
+
+<ul>
+<li> C. Manski  (1993) "Identification of endogenous social effects: The reflection problem", The Review of Economic Studies.
+<li> C. Shalizi, A. Thomas (2011) "Homophily and contagion are generically confounded in observational social network studies", Sociological methods & research.
+<li> E. Bakshy, D. Eckles, R. Yan, I. Rosenn. (2012) "Social Influence in Social Advertising: Evidence from Field Experiments," Proceedings of EC.
+<li> E. Bakshy, I. Rosenn, C. Marlow, L. Adamic (2012) "The Role of Social Networks in Information Diffusion," Proceedings of WWW.
+
+<li> J. Zhang, D. Brackbill, S. Yang, D. Centola (2015) "Efficacy and causal mechanism of an online social media intervention to increase physical activity: Results of a randomized controlled trial", Preventitive Medicine Reports. [<a href="http://www.sciencedirect.com/science/article/pii/S2211335515001072">paper</a>, <a href="http://www.sciencedirect.com/science/article/pii/S2352340915002437">data</a>]
+<!--
+<li>	Rubin observational studies book. 
+<li>	Cochrane paper on observational studies: 
+-->
+</ul>
+
+<ul>
+<li>	P. Aronow, C Samii (2011) "Estimating average causal effects under interference between units", arXiv.
+<li> C. Manski (2013) "Identification of treatment response with social interactions", The Econometrics Journal.
+<li> J. Ugander, B. Karrer, L. Backstrom, J. Kleinberg. (2013) "Graph Cluster Randomization: Network Exposure to Multiple Universes", Proceedings of KDD.
+<li> D. Eckles, B. Karrer, J. Ugander (2014) "Design and analysis of experiments in networks: Reducing bias from interference", arXiv.
+<li> H. Gui, Y. Xu, A. Bhasin, J. Han (2015) "Network A/B Testing: From Sampling to Estimation", Proceedings of WWW.
+<li> Y. Xu, N. Chen, A. Fernandez, O. Sinno, A. Bhasin (2015) "From Infrastructure to Culture: A/B Testing Challenges in Large Scale Social Networks", Proceedings of KDD.
+<li> D. Walker, L. Muchnik (2015) "Design of Randomized Experiments in Networks", Proceedings of IEEE. [<a href="http://mae.engr.ucdavis.edu/dsouza/Pubs/PIEEE_vol102_12.pdf#page=70">link</a>]
+<li> M. Saveski, J. Pouget-Abadie, G. Saint-Jacques, W. Duan, S. Ghosh, Y. Xu, E. Airoldi (2017) "Detecting Network Effects: Randomizing Over Randomized Experiments", Proceedings of KDD.
+</ul>
+<!--
+Dirichlet eigenvector clustering:
+<ul>
+<li>	A. Tsiatas, I. Saniee, O. Narayan, M. Andrews (2013). “Spectral analysis of communication networks using Dirichlet eigenvalues.” Proceedings of WWW.
+
+</ul>
+-->
+<br><br>
+<h4>
+Weeks 8 
+</h4>
+Friendship paradox, small worlds.
+<ul>
+<li>	S. L. Feld (1991). “Why your friends have more friends than you do.” American Journal of Sociology, p. 1464-1477.
+<li>	J. Ugander, B. Karrer, L. Backstrom, C. Marlow (2011) “The Anatomy of the Facebook Social Graph,” arXiv.
+<li>	F. Kooti, N. O. Hodas, K. Lerman (2014) “Network Weirdness: Exploring the Origins of Network Paradoxes”, Proceedings of ICWSM.
+<li>	S. Lattanzi, Y. Singer (2015). “The Power of Random Neighbors in Social Networks” Proceedings of WSDM.
+</ul>
+Applications of the friendship paradox:
+<ul>
+<li>	R. Pastor-Satorras, A. Vespignani (2002) “Immunization of complex networks.” Phys Rev E; 65: 036104.
+<li>	N. A. Christakis, J. H. Fowler (2010) “Social network sensors for early detection of contagious outbreaks", PLOS One.
+<li>	D. A. Kim et al. (2015) “Social network targeting to maximise population behaviour change: a cluster randomised controlled trial”, The Lancet.
+</ul>
+
+Small worlds:
+<ul>
+<li>	S. Milgram (1967) “The small world problem,” Psychology Today.
+<li>	J. Travers, S. Milgram (1969) “An Experimental Study of the Small World Problem,” Sociometry.
+<li>    D. Watts, S. Strogatz (1998) "Collective dynamics of 'small-world' networks", Nature.
+<li>    J. Kleinberg (2000) "The small-world phenomenon: An algorithmic perspective", STOC.
+<li> D. Liben-Nowell, J. Novak, R. Kumar, P. Raghavan, A. Tomkins (2005) "Geographic routing in social networks", PNAS.
+<li> L Backstrom, E Sun, C Marlow (2010) "Find me if you can: improving geographical prediction with social and spatial proximity", ICWSM.
+<li>  Z Yang, W Chen (2015) "A Game Theoretic Model for the Formation of Navigable Small-World Networks", WWW.
+</ul>
+Distance distributions:
+<ul>
+<li> J. Leskovec, E. Horvitz (2008) "Planetary-Scale Views on an Instant-Messaging Network", Proceedings of WWW.
+<li>	L. Backstrom, P. Boldi, M. Rosa, J. Ugander, S. Vigna (2012) "Four Degrees of Separation", WebSci.
+<li>	A. Jacobs, S.F. Way, J. Ugander, A. Clauset (2015) "Assembling thefacebook: Using Heterogeneity to Understand Online Social Network Assembly", WebSci.
+ 
+</ul>
+
+<!--
+<br><br>
+<h4 id='papers'>Week 9: Dissecting Papers (11/27, 11/29)</h4>
+<p>
+During Week 9 the course will take on an active discursive style, aiming to synthesize what we've discussed as we dissect the methodologies of recent, complex applied papers. We will take a survey during Week 8 to determine the papers we want to discuss. In recent years the following papers have been discussed. We will only do two papers.
+
+<ul>
+<li> E. Bakshy, S. Messing, L. A. Adamic (2015) "Exposure to ideologically diverse news and opinion on Facebook", Science [<a href="http://science.sciencemag.org/content/348/6239/1130">link</a>]
+<li> R. M. Bond, C. J. Fariss, J. J. Jones, A. D. I. Kramer, C. Marlow, J. E. Settle, J. H. Fowler (2012), "A 61-million-person experiment in social influence and political mobilization", Nature. [<a href="http://fowler.ucsd.edu/massive_turnout.pdf">paper</a>, <a href="http://fowler.ucsd.edu/massive_turnout_supplement.pdf">supplemental information</a>] 
+<li> L. Beaman, A. BenYishay, J. Magruder, A. M. Mobarak (2015) "Can Network Theory-based Targeting Increaes Technology Adaption?", Working paper.
+[<a href="http://faculty.som.yale.edu/mushfiqmobarak/papers/MNW.pdf">link</a>]
+<li> D. A. Kim, A. R. Hwong, D. Stafford, D. A. Hughes, A J. O'Malley, J. H. Fowler, N. A. Christakis (2015). "Social network targeting to maximise population behaviour change: a cluster randomised controlled trial", Lancet. [<a href="http://nicholaschristakis.net/wp-content/uploads/2015/03/162-Social-network-targeting-to-maximise-population-behaviour-change-a-cluster-randomised-controlled-trial.pdf">link</a>]
+</uL>
+<br><br>
+
+Suggestions:
+<ul>
+<li>	S. Aral, D. Walker (2012), “Identifying influential and susceptible members of social networks”, Science.
+<li>	A. Banerjee, AG Chandrasekhar, E Duflo, MO Jackson. (2013) “The diffusion of microfinance.” Science. [<a href="http://www.sciencemag.org/content/341/6144/1236498">paper</a>, <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/21538">data</a>]
+<li>  M. Godinho de Matos, P. Ferreira, R. Belo (2015) "Target the ego or target the group: Evidence from a randomized experiment in pro-active churn management", Working paper.
+
+Extracting multistage screening rules from online dating activity data
+
+
+<h4>
+Week 10 (12/4, 12/6)
+</h4>
+<p>
+In-class presentations of student projects.
+</p>
+-->
+
+<br><br>
+<h3 id='software'>Tools and Data</h3>
+
+Here are some libraries that might be useful for the problem sets and projects:
+<ul>
+<li>
+<a href="https://networkx.github.io/">NetworkX</a> (Python), 
+<a href="https://graph-tool.skewed.de/">graph-tool</a> (Python), 
+<a href="http://snap.stanford.edu/snappy/index.html">SNAP</a> (C++, Python), <a href="http://igraph.org/">igraph</a> (R, python, C)
+</ul>
+
+<p>
+Some data sources:
+<ul>
+<li> <a href="http://snap.stanford.edu/data/index.html">SNAP network datasets</a>
+<li> <a href="http://web.stanford.edu/class/cs224w/resources.html">Datasets from CS224W</a>
+</ul>
+
+
+<br><br><br><br>
+<br><br><br><br>
+<br><br><br><br>
+
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/bootstrap-min.js"></script>
+
+  </body>
+</html>
