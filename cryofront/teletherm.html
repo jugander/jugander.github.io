@@ -369,11 +369,27 @@ header .subtitle {
   font-style: italic;
 }
 
+/* --- Crosslink --- */
+
+.see-also {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.7rem;
+  color: var(--footer-text);
+}
+
+.see-also a {
+  color: var(--footer-link);
+  text-decoration: none;
+}
+
+.see-also a:hover { color: var(--footer-link-hover); text-decoration: underline; }
+
 /* --- Footer --- */
 
 footer {
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--footer-text);
 }
@@ -590,6 +606,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     </div>
   </div>
 
+  <div class="see-also">See also: <a href="index.html">[Cryofront]</a></div>
   <footer>
     Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>. Last updated Feb 9, 2026.
     Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
@@ -615,7 +632,7 @@ const CONFIG = {
 };
 
 const END_YEAR = new Date().getFullYear() - 1; // only completed years
-const START_YEAR = END_YEAR - 49; // 50 years
+const START_YEAR = 1950;
 
 let chartInstance = null;
 let lastResults = null;
@@ -857,6 +874,27 @@ function linearTrend(xs, ys) {
   return { slope, intercept, predict: (x) => slope * x + intercept };
 }
 
+// Cyclical-aware trend: projects day-of-year onto the unit circle (cos/sin),
+// fits linear regressions on both components, then recovers the angle.
+// This minimises cyclical squared loss — day 1 and day 365 are treated as
+// adjacent rather than 364 apart.
+function cyclicalTrend(xs, ys, period) {
+  const cosVals = ys.map(d => d != null ? Math.cos(2 * Math.PI * d / period) : null);
+  const sinVals = ys.map(d => d != null ? Math.sin(2 * Math.PI * d / period) : null);
+  const cosTrend = linearTrend(xs, cosVals);
+  const sinTrend = linearTrend(xs, sinVals);
+  if (!cosTrend || !sinTrend) return null;
+  return {
+    predict: (x) => {
+      const c = cosTrend.predict(x);
+      const s = sinTrend.predict(x);
+      let angle = Math.atan2(s, c);
+      if (angle < 0) angle += 2 * Math.PI;
+      return (angle / (2 * Math.PI)) * period;
+    }
+  };
+}
+
 // =========================================================================
 // UI helpers
 // =========================================================================
@@ -1041,8 +1079,8 @@ function renderChart(results, locationName) {
   const trendYears = years.filter((_, i) => !isPartial[i]);
   const trendWarm = warmDays.filter((_, i) => !isPartial[i]);
   const trendCold = coldDays.filter((_, i) => !isPartial[i]);
-  const warmTrend = linearTrend(trendYears, trendWarm);
-  const coldTrend = linearTrend(trendYears, trendCold);
+  const warmTrend = cyclicalTrend(trendYears, trendWarm, 365);
+  const coldTrend = cyclicalTrend(trendYears, trendCold, 365);
 
   // Point styling: current year gets hollow circle
   const warmPointBg = warmDays.map((_, i) => isPartial[i] ? 'transparent' : t.warmColor);

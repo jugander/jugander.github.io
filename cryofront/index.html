@@ -480,11 +480,27 @@ header .subtitle {
   font-style: italic;
 }
 
+/* --- Crosslink --- */
+
+.see-also {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.7rem;
+  color: var(--footer-text);
+}
+
+.see-also a {
+  color: var(--footer-link);
+  text-decoration: none;
+}
+
+.see-also a:hover { color: var(--footer-link-hover); text-decoration: underline; }
+
 /* --- Footer --- */
 
 footer {
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--footer-text);
 }
@@ -729,6 +745,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     </div>
   </div>
 
+  <div class="see-also">See also: <a href="teletherm.html">[Teletherm]</a></div>
   <footer>
     Last updated Feb 9, 2026. Cooked with Claude by Johan Ugander. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)
