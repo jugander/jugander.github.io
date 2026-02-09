@@ -1294,14 +1294,17 @@ document.getElementById('export-btn').addEventListener('click', () => {
 
   const src = chartInstance.canvas;
   const dpr = window.devicePixelRatio || 1;
-  const srcW = src.width;   // already in device pixels
+  const srcW = src.width;
   const srcH = src.height;
+  const dark = isDark();
+  const is10 = numSeasons === 10;
 
   const titleH = Math.round(36 * dpr);
+  const legendH = is10 ? Math.round(22 * dpr) : 0;
   const footerH = Math.round(28 * dpr);
   const padX = Math.round(12 * dpr);
   const totalW = srcW + padX * 2;
-  const totalH = srcH + titleH + footerH;
+  const totalH = srcH + titleH + legendH + footerH;
 
   const c = document.createElement('canvas');
   c.width = totalW;
@@ -1309,7 +1312,6 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const ctx = c.getContext('2d');
 
   // Background
-  const dark = isDark();
   ctx.fillStyle = dark ? '#16213e' : '#ffffff';
   ctx.fillRect(0, 0, totalW, totalH);
 
@@ -1324,16 +1326,58 @@ document.getElementById('export-btn').addEventListener('click', () => {
   // Chart
   ctx.drawImage(src, padX, titleH);
 
+  // Legend (10y only)
+  if (is10) {
+    const ds = chartInstance.data.datasets;
+    const legFontSize = Math.round(8.5 * dpr);
+    const swatchW = Math.round(14 * dpr);
+    const swatchH = Math.round(3 * dpr);
+    const gap = Math.round(6 * dpr);
+    const itemGap = Math.round(12 * dpr);
+    const legY = titleH + srcH + legendH / 2;
+
+    // Measure total width
+    ctx.font = `${legFontSize}px system-ui, -apple-system, sans-serif`;
+    let totalLegW = 0;
+    const items = ds.map((d, i) => {
+      const tag = d.label.replace('Winter ', '');
+      const tw = ctx.measureText(tag).width;
+      totalLegW += swatchW + gap + tw;
+      return { tag, tw, color: d._baseColor, isCurrent: i === ds.length - 1 };
+    });
+    totalLegW += itemGap * (items.length - 1);
+
+    let x = (totalW - totalLegW) / 2;
+    items.forEach((item, i) => {
+      // Swatch
+      ctx.fillStyle = item.color;
+      const sh = item.isCurrent ? swatchH + Math.round(1 * dpr) : swatchH;
+      ctx.fillRect(Math.round(x), Math.round(legY - sh / 2), swatchW, sh);
+      x += swatchW + gap;
+      // Label
+      ctx.fillStyle = dark ? '#999' : '#777';
+      if (item.isCurrent) ctx.font = `600 ${legFontSize}px system-ui, -apple-system, sans-serif`;
+      else ctx.font = `${legFontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.tag, Math.round(x), legY);
+      x += item.tw + itemGap;
+    });
+    ctx.textAlign = 'center';
+  }
+
   // Footer
   const footSize = Math.round(9 * dpr);
   ctx.font = `${footSize}px system-ui, -apple-system, sans-serif`;
   ctx.fillStyle = dark ? '#666' : '#999';
-  ctx.fillText('Made by Cryofront, cooked with Claude by Johan Ugander.', totalW / 2, titleH + srcH + footerH / 2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Made by Cryofront, cooked with Claude by Johan Ugander.', totalW / 2, titleH + srcH + legendH + footerH / 2);
 
   // Download
   const link = document.createElement('a');
   const slug = lastLocationName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().replace(/-+$/, '');
-  link.download = `cryofront-${slug}.png`;
+  link.download = `cryofront-${numSeasons}y-${slug}.png`;
   link.href = c.toDataURL('image/png');
   link.click();
 });
