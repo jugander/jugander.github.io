@@ -638,7 +638,7 @@ function computeThermochron(dailyHighs) {
       for (let j = i; j < i + k; j++) {
         if (dailyHighs[j] > wMax) wMax = dailyHighs[j];
       }
-      if (wMax < minOfMax) { minOfMax = wMax; bestStart = i; }
+      if (wMax <= minOfMax) { minOfMax = wMax; bestStart = i; }
     }
     kValues.push(k);
     thermoValues.push(minOfMax);
