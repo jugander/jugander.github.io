@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teletherm</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='w' x1='0.5' y1='0' x2='0.5' y2='0.5'%3E%3Cstop offset='0%25' stop-color='%23f0c040'/%3E%3Cstop offset='100%25' stop-color='%23e84d60'/%3E%3C/linearGradient%3E%3ClinearGradient id='c' x1='0.5' y1='0.5' x2='0.5' y2='1'%3E%3Cstop offset='0%25' stop-color='%2300cfd8'/%3E%3Cstop offset='100%25' stop-color='%235b9bd5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg stroke-linecap='round' fill='none'%3E%3Cg stroke='url(%23w)' stroke-width='2.2'%3E%3Cline x1='16' y1='4' x2='16' y2='14'/%3E%3Cline x1='16' y1='4' x2='12.5' y2='7.5'/%3E%3Cline x1='16' y1='4' x2='19.5' y2='7.5'/%3E%3Cline x1='8' y1='8' x2='13.5' y2='13.5'/%3E%3Cline x1='24' y1='8' x2='18.5' y2='13.5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23e84d60' stroke='none'/%3E%3Cg stroke='url(%23c)' stroke-width='2.2'%3E%3Cline x1='16' y1='18' x2='16' y2='28'/%3E%3Cline x1='16' y1='28' x2='12.5' y2='24.5'/%3E%3Cline x1='16' y1='28' x2='19.5' y2='24.5'/%3E%3Cline x1='8' y1='24' x2='13.5' y2='18.5'/%3E%3Cline x1='24' y1='24' x2='18.5' y2='18.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<meta name="description" content="When does your hottest and coldest day fall? Track how the timing of annual temperature extremes drifts over 50 years.">
+<meta name="theme-color" content="#e84d60">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Teletherm">
+<meta property="og:description" content="When does your hottest and coldest day fall? Track how the timing of annual temperature extremes drifts over 50 years.">
+<meta property="og:image" content="https://jugander.github.io/cryofront/og-image-teletherm.png">
+<meta property="og:url" content="https://jugander.github.io/cryofront/teletherm.html">
+<!-- Twitter / Bluesky -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Teletherm">
+<meta name="twitter:description" content="When does your hottest and coldest day fall? Track how the timing of annual temperature extremes drifts over 50 years.">
+<meta name="twitter:image" content="https://jugander.github.io/cryofront/og-image-teletherm.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* --- Theme variables --- */
+
+:root {
+  --bg: #1a1a2e;
+  --bg-card: #16213e;
+  --text: #e0e0e0;
+  --text-heading: #f0f0f0;
+  --text-muted: #888;
+  --text-card: #aaa;
+  --text-card-strong: #ccc;
+  --input-bg: #16213e;
+  --input-border: #333;
+  --input-text: #f0f0f0;
+  --input-placeholder: #666;
+  --accent: #00adb5;
+  --accent-hover: #00c9d4;
+  --footer-text: #666;
+  --footer-link: #888;
+  --footer-link-hover: #aaa;
+  --spinner-color: #f0c040;
+  --status-loading: #f0c040;
+  --status-error: #ff6b6b;
+  --location-color: #e8e8e8;
+}
+
+html.light {
+  --bg: #f4f4f8;
+  --bg-card: #ffffff;
+  --text: #333;
+  --text-heading: #1a1a2e;
+  --text-muted: #777;
+  --text-card: #666;
+  --text-card-strong: #444;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --input-text: #333;
+  --input-placeholder: #999;
+  --accent: #0088a0;
+  --accent-hover: #006a7d;
+  --footer-text: #999;
+  --footer-link: #777;
+  --footer-link-hover: #555;
+  --spinner-color: #c89b00;
+  --status-loading: #b08800;
+  --status-error: #d33;
+  --location-color: #222;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+
+#app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+header h1 {
+  font-size: 2.2rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: var(--text-heading);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.logo-icon {
+  width: 1.6em;
+  height: 1.6em;
+  flex-shrink: 0;
+}
+
+header .subtitle {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- Slide toggles --- */
+
+.slide-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--input-border);
+  border-radius: 20px;
+  background: var(--input-bg);
+  cursor: pointer;
+  padding: 2px;
+  position: relative;
+  transition: border-color 0.2s, background 0.3s;
+  user-select: none;
+}
+
+.slide-toggle:hover { border-color: var(--accent); }
+
+.slide-toggle .opt {
+  position: relative;
+  z-index: 1;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.25s;
+  line-height: 1;
+}
+
+.slide-toggle .opt.active { color: var(--text-heading); }
+
+.slide-toggle .slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 16px;
+  background: var(--accent);
+  opacity: 0.25;
+  transition: left 0.25s ease, width 0.25s ease;
+  pointer-events: none;
+}
+
+#theme-toggle-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* --- Input --- */
+
+#zip-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+#loc-wrap {
+  position: relative;
+}
+
+#loc-input {
+  width: 240px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  outline: none;
+  transition: border-color 0.2s, background 0.3s, color 0.3s;
+}
+
+#loc-input:focus { border-color: var(--accent); }
+#loc-input::placeholder { color: var(--input-placeholder); }
+
+#zip-form label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+#loc-suggestions {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+#loc-suggestions li {
+  padding: 0.5rem 0.8rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#loc-suggestions li:hover,
+#loc-suggestions li.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+#loc-suggestions li .loc-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+}
+
+#loc-suggestions li:hover .loc-sub,
+#loc-suggestions li.active .loc-sub {
+  color: rgba(255,255,255,0.7);
+}
+
+#go-btn {
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+#go-btn:hover { background: var(--accent-hover); }
+#go-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- Status --- */
+
+#status-area {
+  text-align: center;
+  min-height: 1.4rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+#status-area.loading { color: var(--status-loading); }
+#status-area.error { color: var(--status-error); }
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--spinner-color);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Chart --- */
+
+#chart-container {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem 1rem 1rem;
+  margin-top: 0.5rem;
+  transition: background 0.3s;
+}
+
+#location-name {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--location-color);
+  margin-bottom: 1rem;
+}
+
+#chart-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* --- Chart legend --- */
+
+#chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 0.7rem;
+  margin-top: 0.5rem;
+  padding: 0 0.5rem;
+}
+
+#chart-legend .leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+#chart-legend .leg-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+#chart-legend .leg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+#export-btn {
+  display: block;
+  margin: 0.5rem auto 0;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.72rem;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+#export-btn:hover { opacity: 1; border-color: var(--accent); }
+
+/* --- Explanation --- */
+
+#explanation {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  color: var(--text-card);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  transition: background 0.3s;
+}
+
+#explanation strong { color: var(--text-card-strong); }
+
+#data-time {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- Footer --- */
+
+footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: var(--footer-text);
+}
+
+footer a {
+  color: var(--footer-link);
+  text-decoration: none;
+}
+
+footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
+
+/* --- Details lightbox --- */
+
+#details-link {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 0.3rem;
+}
+#details-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+#details-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#details-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#details-card {
+  position: relative;
+  max-width: 600px;
+  width: calc(100% - 2rem);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  background: var(--bg-card);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  line-height: 1.65;
+  font-size: 0.88rem;
+}
+
+#details-card h3 {
+  color: var(--text-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+#details-card h4 {
+  color: var(--text-card-strong);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-top: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+#details-card p {
+  margin-bottom: 0.7rem;
+  color: var(--text-card);
+}
+
+#details-card strong { color: var(--text-card-strong); }
+
+#details-card a { color: var(--accent); text-decoration: none; }
+#details-card a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+#details-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+#details-close:hover { color: var(--text); background: rgba(128,128,128,0.15); }
+
+/* --- Responsive --- */
+
+@media (max-width: 600px) {
+  #app { padding: 1rem 0.75rem; }
+  header h1 { font-size: 1.6rem; }
+  #zip-form { flex-wrap: wrap; }
+  #zip-form label { font-size: 0.75rem; }
+  #loc-input { width: 160px; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
+  #chart-container { padding: 1rem 0.5rem 0.5rem; border-radius: 8px; }
+  #location-name { font-size: 1.1rem; }
+  #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
+  #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
+  #explanation { font-size: 0.8rem; padding: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1><svg class="logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="wg" x1="0.5" y1="0" x2="0.5" y2="0.5"><stop offset="0%" stop-color="#f0c040"/><stop offset="100%" stop-color="#e84d60"/></linearGradient><linearGradient id="cg" x1="0.5" y1="0.5" x2="0.5" y2="1"><stop offset="0%" stop-color="#00cfd8"/><stop offset="100%" stop-color="#5b9bd5"/></linearGradient></defs><g stroke-linecap="round" fill="none"><g stroke="url(#wg)" stroke-width="2.2"><line x1="16" y1="4" x2="16" y2="14"/><line x1="16" y1="4" x2="12.5" y2="7.5"/><line x1="16" y1="4" x2="19.5" y2="7.5"/><line x1="8" y1="8" x2="13.5" y2="13.5"/><line x1="24" y1="8" x2="18.5" y2="13.5"/></g><circle cx="16" cy="16" r="2.5" fill="#e84d60" stroke="none"/><g stroke="url(#cg)" stroke-width="2.2"><line x1="16" y1="18" x2="16" y2="28"/><line x1="16" y1="28" x2="12.5" y2="24.5"/><line x1="16" y1="28" x2="19.5" y2="24.5"/><line x1="8" y1="24" x2="13.5" y2="18.5"/><line x1="24" y1="24" x2="18.5" y2="18.5"/></g></g></svg>Teletherm</h1>
+    <p class="subtitle">When do the hottest and coldest days fall?</p>
+    <div id="theme-toggle-wrap">
+      <div class="slide-toggle" id="theme-toggle">
+        <div class="slider"></div>
+        <span class="opt" data-val="dark">Dark</span>
+        <span class="opt" data-val="light">Light</span>
+      </div>
+    </div>
+  </header>
+
+  <form id="zip-form">
+    <label for="loc-input">City/ZIP:</label>
+    <div id="loc-wrap">
+      <input type="text" id="loc-input" placeholder="ZIP code or city name" autocomplete="off" spellcheck="false">
+      <ul id="loc-suggestions"></ul>
+    </div>
+    <button type="submit" id="go-btn">Go</button>
+  </form>
+
+  <div id="status-area"></div>
+
+  <div id="chart-container" style="display:none;">
+    <h2 id="location-name"></h2>
+    <div id="chart-wrapper">
+      <canvas id="teletherm-chart"></canvas>
+    </div>
+    <div id="chart-legend"></div>
+    <button id="export-btn" title="Save as PNG">Save PNG</button>
+  </div>
+
+  <div id="explanation">
+    <strong>What is a teletherm?</strong> The <em>summer teletherm</em> is the
+    calendar date of the year&rsquo;s highest daily high temperature; the
+    <em>winter teletherm</em> is the date of the lowest daily low.
+    This chart tracks when those extreme days fall each year over 50 years.
+    If the red dots drift later, summers are peaking later.
+    If the blue dots shift, the coldest day is moving too.
+    Dashed lines show the linear trend.
+    The concept comes from
+    <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">Dodds&nbsp;et&nbsp;al.&nbsp;(2016)</a>.
+    <span id="data-time"></span>
+    <a href="#" id="details-link">More details&hellip;</a>
+  </div>
+
+  <div id="details-modal" style="display:none;">
+    <div id="details-backdrop"></div>
+    <div id="details-card">
+      <button id="details-close" aria-label="Close">&times;</button>
+      <h3>About Teletherms</h3>
+      <p>
+        For each calendar year, the <strong>summer teletherm</strong> is the
+        date on which the daily high temperature was highest, and the
+        <strong>winter teletherm</strong> is the date on which the daily low
+        temperature was lowest. These are, in the words of
+        <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">Dodds et al.</a>,
+        &ldquo;the statistically hottest and coldest days of the year&rdquo;&mdash;an
+        intuitive and powerful measure of local climate.
+      </p>
+      <h4>Reading the chart</h4>
+      <p>
+        The x-axis shows years (a 50-year span). The y-axis shows the day
+        of the year, labeled by month.
+        <span style="color:#e84d60;">Red dots</span> mark the warmest day
+        each year (highest daily high);
+        <span style="color:#5b9bd5;">blue dots</span> mark the coldest
+        (lowest daily low). Dashed lines show the linear trend over time.
+      </p>
+      <p>
+        If a trend line slopes upward, that extreme is shifting later in the
+        year; downward means earlier. Hover over any point to see the exact
+        date and temperature.
+      </p>
+      <h4>What drift means</h4>
+      <p>
+        Systematic shifts in when the hottest or coldest day occurs can
+        signal changes in seasonal patterns&mdash;longer or shorter summers,
+        changes in jet stream behavior, or the breakdown of historically
+        stable seasonal timing. Dodds et al. found clear and sometimes
+        dramatic shifts across U.S. stations over 160 years.
+      </p>
+      <h4>Tie-breaking</h4>
+      <p>
+        When multiple days in a year share the same extreme temperature,
+        the latest occurrence is shown. This means, for example, that a
+        late-season heat wave takes precedence over an earlier one of the
+        same intensity.
+      </p>
+      <h4>Data source</h4>
+      <p>
+        Daily high and low temperatures come from the
+        <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        historical archive. The current year&rsquo;s data runs through today
+        and is marked with a hollow dot, since the year is still in progress.
+      </p>
+      <h4>Reference</h4>
+      <p>
+        Dodds, P.S., Mitchell, L., Reagan, A.J., &amp; Danforth, C.M. (2016).
+        &ldquo;Tracking Climate Change through the Spatiotemporal Dynamics of
+        the Teletherms, the Statistically Hottest and Coldest Days of the
+        Year.&rdquo; <em>PLOS ONE</em>, 11(5), e0154184.
+        <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">doi:10.1371/journal.pone.0154184</a>
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>.
+    Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
+    (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>).
+    Inspired by <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">Dodds et al. (2016)</a>.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+'use strict';
+
+// =========================================================================
+// Config
+// =========================================================================
+
+const CONFIG = {
+  GEOCODING_URL: 'https://geocoding-api.open-meteo.com/v1/search',
+  ARCHIVE_URL: 'https://archive-api.open-meteo.com/v1/archive',
+  TIMEZONE: 'America/New_York',
+  CACHE_MAX_AGE_MS: 3600 * 1000,
+};
+
+const END_YEAR = new Date().getFullYear() - 1; // only completed years
+const START_YEAR = END_YEAR - 49; // 50 years
+
+let chartInstance = null;
+let lastResults = null;
+let lastLocationName = '';
+
+function isDark() { return !document.documentElement.classList.contains('light'); }
+
+function theme() {
+  const dark = isDark();
+  return {
+    warmColor: '#e84d60',
+    coldColor: '#5b9bd5',
+    warmTrend: dark ? 'rgba(232,77,96,0.35)' : 'rgba(232,77,96,0.3)',
+    coldTrend: dark ? 'rgba(91,155,213,0.35)' : 'rgba(91,155,213,0.3)',
+    axisText: dark ? '#888' : '#777',
+    axisTitle: dark ? '#999' : '#666',
+    grid: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+  };
+}
+
+// =========================================================================
+// Cache (localStorage)
+// =========================================================================
+
+function readCache(key, maxAgeMs) {
+  try {
+    const raw = localStorage.getItem('tt_' + key);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (maxAgeMs != null) {
+      if (Date.now() - entry.ts > maxAgeMs) return null;
+    }
+    return entry.d;
+  } catch { return null; }
+}
+
+function writeCache(key, data) {
+  try {
+    localStorage.setItem('tt_' + key, JSON.stringify({ d: data, ts: Date.now() }));
+  } catch { /* full or unavailable */ }
+}
+
+// =========================================================================
+// Helpers
+// =========================================================================
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function dayOfYear(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return Math.floor((d - jan1) / 86400000) + 1;
+}
+
+// Shift DOY so Nov 1 (DOY 305) maps to 1, keeping winter days together
+const DOY_OFFSET = 304; // Nov 1 = DOY 305 → shifted 1
+function shiftedDoy(doy) {
+  return ((doy - 1 - DOY_OFFSET + 365) % 365) + 1;
+}
+
+function doyToLabel(doy, year) {
+  // doy here is already a real day-of-year (unshifted), used for date labels
+  const d = new Date(year || 2023, 0, doy);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function shiftedDoyToLabel(sdoy) {
+  // Convert shifted DOY back to a date label
+  const realDoy = ((sdoy - 1 + DOY_OFFSET) % 365) + 1;
+  const d = new Date(2023, 0, realDoy);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function monthTicks() {
+  const ticks = [];
+  // Order: Nov, Dec, Jan, Feb, ..., Oct
+  const monthOrder = [10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for (const m of monthOrder) {
+    const d = new Date(2023, m, 1);
+    const jan1 = new Date(2023, 0, 1);
+    const rawDoy = Math.floor((d - jan1) / 86400000) + 1;
+    ticks.push({ doy: shiftedDoy(rawDoy), label: months[m] });
+  }
+  ticks.sort((a, b) => a.doy - b.doy);
+  return ticks;
+}
+
+// =========================================================================
+// Geocoding
+// =========================================================================
+
+function isZip(s) { return /^\d{5}$/.test(s); }
+
+async function geocodeQuery(query) {
+  const key = query.trim().toLowerCase();
+  const cacheKey = `geo_${key}`;
+  const cached = readCache(cacheKey);
+  if (cached) return cached;
+
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
+  if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
+  const data = await resp.json();
+  const results = data.results || [];
+
+  const zip = isZip(query) ? query : null;
+
+  if (zip) {
+    for (const r of results) {
+      if (r.country_code === 'US' && (r.postcodes || []).includes(zip)) {
+        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+        writeCache(cacheKey, loc);
+        return loc;
+      }
+    }
+  }
+  for (const r of results) {
+    if (r.country_code === 'US') {
+      const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+      writeCache(cacheKey, loc);
+      return loc;
+    }
+  }
+  throw new Error(`No US location found for "${query}"`);
+}
+
+async function geocodeSearch(query) {
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return (data.results || [])
+    .filter(r => r.country_code === 'US')
+    .slice(0, 5)
+    .map(r => ({ name: r.name, admin1: r.admin1 || '', lat: r.latitude, lon: r.longitude }));
+}
+
+let selectedLoc = null;
+
+// =========================================================================
+// Weather data fetching
+// =========================================================================
+
+async function fetchYearData(loc, year) {
+  const lat = loc.lat.toFixed(4);
+  const lon = loc.lon.toFixed(4);
+  const isCurrentYear = (year === END_YEAR);
+  const startDate = `${year}-01-01`;
+  const endDate = isCurrentYear ? isoDate(new Date()) : `${year}-12-31`;
+
+  const cacheKey = `y_${lat}_${lon}_${year}`;
+  const cached = readCache(cacheKey, isCurrentYear ? CONFIG.CACHE_MAX_AGE_MS : undefined);
+  if (cached) return cached;
+
+  const url = `${CONFIG.ARCHIVE_URL}?latitude=${lat}&longitude=${lon}` +
+    `&start_date=${startDate}&end_date=${endDate}` +
+    `&daily=temperature_2m_max,temperature_2m_min` +
+    `&temperature_unit=fahrenheit` +
+    `&timezone=${CONFIG.TIMEZONE}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Weather API error (HTTP ${resp.status})`);
+  const data = await resp.json();
+  if (!data.daily) throw new Error('Unexpected API response');
+
+  const result = {
+    dates: data.daily.time,
+    highs: data.daily.temperature_2m_max,
+    lows: data.daily.temperature_2m_min,
+  };
+
+  writeCache(cacheKey, result);
+  return result;
+}
+
+// =========================================================================
+// Teletherm computation
+// =========================================================================
+
+function computeTeletherms(yearDataMap) {
+  const years = Object.keys(yearDataMap).map(Number).sort((a, b) => a - b);
+  const warmDays = [], coldDays = [];
+  const warmTemps = [], coldTemps = [];
+  const warmDates = [], coldDates = [];
+  const isPartial = [];
+
+  for (const year of years) {
+    const yd = yearDataMap[year];
+
+    // Find date of highest high (latest wins on ties)
+    let maxHigh = -Infinity, maxIdx = -1;
+    for (let i = 0; i < yd.highs.length; i++) {
+      if (yd.highs[i] !== null && yd.highs[i] >= maxHigh) {
+        maxHigh = yd.highs[i]; maxIdx = i;
+      }
+    }
+
+    // Find date of lowest low (latest wins on ties)
+    let minLow = Infinity, minIdx = -1;
+    for (let i = 0; i < yd.lows.length; i++) {
+      if (yd.lows[i] !== null && yd.lows[i] <= minLow) {
+        minLow = yd.lows[i]; minIdx = i;
+      }
+    }
+
+    const warmRawDoy = maxIdx >= 0 ? dayOfYear(yd.dates[maxIdx]) : null;
+    warmDays.push(warmRawDoy !== null ? shiftedDoy(warmRawDoy) : null);
+    warmTemps.push(maxIdx >= 0 ? maxHigh : null);
+    warmDates.push(maxIdx >= 0 ? yd.dates[maxIdx] : null);
+
+    const coldRawDoy = minIdx >= 0 ? dayOfYear(yd.dates[minIdx]) : null;
+    coldDays.push(coldRawDoy !== null ? shiftedDoy(coldRawDoy) : null);
+    coldTemps.push(minIdx >= 0 ? minLow : null);
+    coldDates.push(minIdx >= 0 ? yd.dates[minIdx] : null);
+
+    isPartial.push(year === END_YEAR);
+  }
+
+  return { years, warmDays, coldDays, warmTemps, coldTemps, warmDates, coldDates, isPartial };
+}
+
+// =========================================================================
+// Linear regression for trend lines
+// =========================================================================
+
+function linearTrend(xs, ys) {
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let i = 0; i < xs.length; i++) {
+    if (ys[i] == null) continue;
+    n++; sx += xs[i]; sy += ys[i]; sxx += xs[i] * xs[i]; sxy += xs[i] * ys[i];
+  }
+  if (n < 2) return null;
+  const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+  const intercept = (sy - slope * sx) / n;
+  return { slope, intercept, predict: (x) => slope * x + intercept };
+}
+
+// =========================================================================
+// UI helpers
+// =========================================================================
+
+const statusEl = document.getElementById('status-area');
+const chartContainer = document.getElementById('chart-container');
+
+function showStatus(msg) {
+  statusEl.className = 'loading';
+  statusEl.innerHTML = '<span class="spinner"></span>' + msg;
+}
+function showError(msg) { statusEl.className = 'error'; statusEl.textContent = msg; }
+function clearStatus() { statusEl.className = ''; statusEl.innerHTML = ''; }
+function showChart() { chartContainer.style.display = ''; }
+function hideChart() { chartContainer.style.display = 'none'; }
+
+// =========================================================================
+// Chart.js highlight plugin
+// =========================================================================
+
+let hoverYearIdx = -1;
+let hoverSeriesIdx = -1;
+
+const highlightPlugin = {
+  id: 'telethermHighlight',
+
+  afterEvent(chart, args) {
+    const evt = args.event;
+    if (evt.type === 'mouseout') {
+      if (hoverYearIdx !== -1) { hoverYearIdx = -1; hoverSeriesIdx = -1; args.changed = true; }
+      return;
+    }
+    if (evt.type !== 'mousemove') return;
+
+    const mouseX = evt.x, mouseY = evt.y;
+    const area = chart.chartArea;
+    if (!area || mouseX < area.left || mouseX > area.right ||
+        mouseY < area.top || mouseY > area.bottom) {
+      if (hoverYearIdx !== -1) { hoverYearIdx = -1; hoverSeriesIdx = -1; args.changed = true; }
+      return;
+    }
+
+    // Find nearest year by x-pixel
+    const meta0 = chart.getDatasetMeta(0);
+    let bestIdx = 0, bestDist = Infinity;
+    for (let i = 0; i < meta0.data.length; i++) {
+      const dx = Math.abs(meta0.data[i].x - mouseX);
+      if (dx < bestDist) { bestDist = dx; bestIdx = i; }
+    }
+
+    // Find nearest of the two scatter series (0=warm, 1=cold) by y
+    let nearestSeries = -1, nearestDist = Infinity;
+    for (let s = 0; s < 2; s++) {
+      const meta = chart.getDatasetMeta(s);
+      if (!meta.visible || !meta.data[bestIdx]) continue;
+      const yVal = chart.data.datasets[s].data[bestIdx];
+      if (yVal == null) continue;
+      const dy = Math.abs(meta.data[bestIdx].y - mouseY);
+      if (dy < nearestDist) { nearestDist = dy; nearestSeries = s; }
+    }
+
+    const changed = bestIdx !== hoverYearIdx || nearestSeries !== hoverSeriesIdx;
+    hoverYearIdx = bestIdx;
+    hoverSeriesIdx = nearestSeries;
+    if (changed) args.changed = true;
+  },
+
+  afterDraw(chart) {
+    if (hoverYearIdx === -1 || hoverSeriesIdx === -1) return;
+    const ds = chart.data.datasets[hoverSeriesIdx];
+    const meta = chart.getDatasetMeta(hoverSeriesIdx);
+    const pt = meta.data[hoverYearIdx];
+    if (!pt || ds.data[hoverYearIdx] == null) return;
+
+    const ctx = chart.ctx;
+    const area = chart.chartArea;
+    const dark = isDark();
+
+    // Vertical guide line
+    ctx.save();
+    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pt.x, area.top);
+    ctx.lineTo(pt.x, area.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Dot on hovered point
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = ds._baseColor;
+    ctx.fill();
+    ctx.restore();
+
+    // Dimmer dot on the other series at the same year
+    const otherIdx = hoverSeriesIdx === 0 ? 1 : 0;
+    const otherDs = chart.data.datasets[otherIdx];
+    const otherMeta = chart.getDatasetMeta(otherIdx);
+    const otherPt = otherMeta.data[hoverYearIdx];
+    if (otherPt && otherDs.data[hoverYearIdx] != null) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(otherPt.x, otherPt.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = otherDs._baseColor;
+      ctx.globalAlpha = 0.4;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Info box
+    const year = ds._years[hoverYearIdx];
+    const dateLabel = ds._dateLabels[hoverYearIdx];
+    const temp = ds._temps[hoverYearIdx];
+    const sDoy = ds.data[hoverYearIdx];
+    const realDoy = ((sDoy - 1 + DOY_OFFSET) % 365) + 1;
+    const partial = ds._partial[hoverYearIdx];
+    const seriesName = hoverSeriesIdx === 0 ? 'Warmest day' : 'Coldest day';
+
+    const line1 = `${year}${partial ? '*' : ''}  ${seriesName}`;
+    const line2 = `${dateLabel}  (day ${realDoy})  ${temp.toFixed(1)}\u00b0F`;
+
+    const fontSize1 = 12;
+    const fontSize2 = 11;
+    ctx.save();
+    ctx.font = `600 ${fontSize1}px system-ui, -apple-system, sans-serif`;
+    const w1 = ctx.measureText(line1).width;
+    ctx.font = `${fontSize2}px system-ui, -apple-system, sans-serif`;
+    const w2 = ctx.measureText(line2).width;
+    const boxW = Math.max(w1, w2) + 16;
+    const boxH = fontSize1 + fontSize2 + 16;
+    const pad = 10;
+
+    let bx = pt.x + pad;
+    let by = pt.y - boxH - pad;
+    if (bx + boxW > area.right) bx = pt.x - boxW - pad;
+    if (by < area.top) by = pt.y + pad;
+
+    ctx.fillStyle = dark ? 'rgba(20,30,50,0.92)' : 'rgba(255,255,255,0.94)';
+    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, boxW, boxH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = dark ? '#e0e0e0' : '#333';
+    ctx.font = `600 ${fontSize1}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(line1, bx + 8, by + 6);
+
+    ctx.fillStyle = dark ? '#aaa' : '#666';
+    ctx.font = `${fontSize2}px system-ui, -apple-system, sans-serif`;
+    ctx.fillText(line2, bx + 8, by + 6 + fontSize1 + 4);
+    ctx.restore();
+  },
+};
+
+// =========================================================================
+// Chart rendering
+// =========================================================================
+
+const MONTH_TICKS = monthTicks();
+
+function renderChart(results, locationName) {
+  const canvas = document.getElementById('teletherm-chart');
+  const t = theme();
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  hoverYearIdx = -1; hoverSeriesIdx = -1;
+
+  lastResults = results;
+  lastLocationName = locationName;
+
+  const { years, warmDays, coldDays, warmTemps, coldTemps, warmDates, coldDates, isPartial } = results;
+
+  // Compute trend lines (exclude current partial year)
+  const trendYears = years.filter((_, i) => !isPartial[i]);
+  const trendWarm = warmDays.filter((_, i) => !isPartial[i]);
+  const trendCold = coldDays.filter((_, i) => !isPartial[i]);
+  const warmTrend = linearTrend(trendYears, trendWarm);
+  const coldTrend = linearTrend(trendYears, trendCold);
+
+  // Point styling: current year gets hollow circle
+  const warmPointBg = warmDays.map((_, i) => isPartial[i] ? 'transparent' : t.warmColor);
+  const warmPointBorder = warmDays.map((_, i) => t.warmColor);
+  const warmPointBorderW = warmDays.map((_, i) => isPartial[i] ? 2 : 0);
+
+  const coldPointBg = coldDays.map((_, i) => isPartial[i] ? 'transparent' : t.coldColor);
+  const coldPointBorder = coldDays.map((_, i) => t.coldColor);
+  const coldPointBorderW = coldDays.map((_, i) => isPartial[i] ? 2 : 0);
+
+  const datasets = [
+    {
+      label: 'Warmest day',
+      data: warmDays,
+      _baseColor: t.warmColor,
+      _years: years,
+      _temps: warmTemps,
+      _dateLabels: warmDates.map(d => {
+        if (!d) return '';
+        const dt = new Date(d + 'T00:00:00');
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }),
+      _partial: isPartial,
+      borderColor: t.warmColor,
+      backgroundColor: warmPointBg,
+      pointBorderColor: warmPointBorder,
+      pointBorderWidth: warmPointBorderW,
+      borderWidth: 1.5,
+      pointRadius: 3.5,
+      pointHoverRadius: 0,
+      tension: 0,
+      order: 1,
+    },
+    {
+      label: 'Coldest day',
+      data: coldDays,
+      _baseColor: t.coldColor,
+      _years: years,
+      _temps: coldTemps,
+      _dateLabels: coldDates.map(d => {
+        if (!d) return '';
+        const dt = new Date(d + 'T00:00:00');
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }),
+      _partial: isPartial,
+      borderColor: t.coldColor,
+      backgroundColor: coldPointBg,
+      pointBorderColor: coldPointBorder,
+      pointBorderWidth: coldPointBorderW,
+      borderWidth: 1.5,
+      pointRadius: 3.5,
+      pointHoverRadius: 0,
+      tension: 0,
+      order: 1,
+    },
+  ];
+
+  // Warm trend line
+  if (warmTrend) {
+    datasets.push({
+      label: 'Warm trend',
+      data: years.map(y => warmTrend.predict(y)),
+      borderColor: t.warmTrend,
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      pointHitRadius: 0,
+      tension: 0,
+      order: 2,
+    });
+  }
+
+  // Cold trend line
+  if (coldTrend) {
+    datasets.push({
+      label: 'Cold trend',
+      data: years.map(y => coldTrend.predict(y)),
+      borderColor: t.coldTrend,
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      pointHitRadius: 0,
+      tension: 0,
+      order: 2,
+    });
+  }
+
+  document.getElementById('location-name').textContent = `Teletherm \u2014 ${locationName}`;
+
+  chartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels: years, datasets },
+    plugins: [highlightPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: window.innerWidth < 600 ? 4 / 3 : 5 / 3,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      scales: {
+        x: {
+          title: { display: true, text: 'Year', color: t.axisTitle, font: { size: 12 } },
+          ticks: {
+            color: t.axisText,
+            callback: (val, idx) => years[idx],
+            maxTicksLimit: 10,
+          },
+          grid: { color: t.grid },
+        },
+        y: {
+          title: { display: true, text: 'Date', color: t.axisTitle, font: { size: 12 } },
+          min: 1,
+          max: 365,
+          reverse: false,
+          ticks: {
+            color: t.axisText,
+            stepSize: 1,
+            autoSkip: false,
+            callback: function(value) {
+              const tick = MONTH_TICKS.find(t => t.doy === value);
+              return tick ? tick.label : '';
+            },
+          },
+          afterBuildTicks(scale) {
+            scale.ticks = MONTH_TICKS.map(t => ({ value: t.doy }));
+          },
+          grid: { color: t.grid },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            summerSolstice: {
+              type: 'line',
+              yMin: shiftedDoy(172), yMax: shiftedDoy(172),
+              borderColor: t.warmTrend,
+              borderWidth: 1,
+              borderDash: [2, 4],
+            },
+            winterSolstice: {
+              type: 'line',
+              yMin: shiftedDoy(356), yMax: shiftedDoy(356),
+              borderColor: t.coldTrend,
+              borderWidth: 1,
+              borderDash: [2, 4],
+            },
+          },
+        },
+        tooltip: { enabled: false },
+      },
+    },
+  });
+
+  // Legend
+  const legendEl = document.getElementById('chart-legend');
+  legendEl.innerHTML = '';
+  [
+    { color: t.warmColor, label: 'Warmest day (highest daily high)' },
+    { color: t.coldColor, label: 'Coldest day (lowest daily low)' },
+  ].forEach(item => {
+    const span = document.createElement('span');
+    span.className = 'leg-item';
+    span.innerHTML = `<span class="leg-dot" style="background:${item.color}"></span>${item.label}`;
+    legendEl.appendChild(span);
+  });
+}
+
+// =========================================================================
+// Form submission
+// =========================================================================
+
+document.getElementById('zip-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  closeSuggestions();
+  const query = document.getElementById('loc-input').value.trim();
+
+  if (!query) { showError('Enter a US ZIP code or city name.'); return; }
+
+  const goBtn = document.getElementById('go-btn');
+  goBtn.disabled = true;
+  hideChart();
+  showStatus('Looking up location\u2026');
+
+  try {
+    let location;
+    if (selectedLoc) { location = selectedLoc; selectedLoc = null; }
+    else { location = await geocodeQuery(query); }
+
+    const totalYears = END_YEAR - START_YEAR + 1;
+    let done = 0;
+    showStatus(`${location.name} \u2014 fetching data\u2026 (0/${totalYears})`);
+
+    const yearDataMap = {};
+    const promises = [];
+    for (let y = START_YEAR; y <= END_YEAR; y++) {
+      promises.push(
+        fetchYearData(location, y).then(data => {
+          yearDataMap[y] = data;
+          done++;
+          showStatus(`${location.name} \u2014 fetching data\u2026 (${done}/${totalYears})`);
+        })
+      );
+    }
+
+    await Promise.allSettled(promises);
+
+    if (Object.keys(yearDataMap).length === 0) {
+      throw new Error('Could not retrieve weather data for any year.');
+    }
+
+    const results = computeTeletherms(yearDataMap);
+
+    // Timestamp
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    document.getElementById('data-time').textContent = `Data through ${timeStr} today.`;
+
+    clearStatus();
+    showChart();
+    renderChart(results, location.name);
+
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+
+// Default location (Burlington, VT — homage to the Dodds team at UVM)
+document.getElementById('loc-input').value = '05401';
+
+// Set data-through year in footer
+document.getElementById('data-through').textContent = END_YEAR;
+
+// =========================================================================
+// Autocomplete
+// =========================================================================
+
+const locInput = document.getElementById('loc-input');
+const sugList = document.getElementById('loc-suggestions');
+let acTimer = null;
+let acIdx = -1;
+
+function closeSuggestions() {
+  sugList.style.display = 'none';
+  sugList.innerHTML = '';
+  acIdx = -1;
+}
+
+function showSuggestions(items) {
+  if (items.length === 0) { closeSuggestions(); return; }
+  sugList.innerHTML = '';
+  acIdx = -1;
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    li.innerHTML = `${item.name}<span class="loc-sub">${item.admin1}</span>`;
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectedLoc = { name: `${item.name}, ${item.admin1}`, lat: item.lat, lon: item.lon };
+      locInput.value = `${item.name}, ${item.admin1}`;
+      closeSuggestions();
+      document.getElementById('zip-form').requestSubmit();
+    });
+    sugList.appendChild(li);
+  });
+  sugList.style.display = 'block';
+}
+
+locInput.addEventListener('input', () => {
+  selectedLoc = null;
+  clearTimeout(acTimer);
+  const q = locInput.value.trim();
+  if (isZip(q) || q.length < 2) { closeSuggestions(); return; }
+  acTimer = setTimeout(async () => {
+    const results = await geocodeSearch(q);
+    if (locInput.value.trim() === q) showSuggestions(results);
+  }, 250);
+});
+
+locInput.addEventListener('keydown', (e) => {
+  const items = sugList.querySelectorAll('li');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIdx = Math.min(acIdx + 1, items.length - 1);
+    items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIdx = Math.max(acIdx - 1, 0);
+    items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+  } else if (e.key === 'Enter' && acIdx >= 0) {
+    e.preventDefault();
+    items[acIdx].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+
+locInput.addEventListener('blur', () => {
+  setTimeout(closeSuggestions, 150);
+});
+
+// =========================================================================
+// Slide toggle helper
+// =========================================================================
+
+function updateSlider(toggle) {
+  const slider = toggle.querySelector('.slider');
+  const activeOpt = toggle.querySelector('.opt.active');
+  if (!activeOpt) return;
+  slider.style.left = activeOpt.offsetLeft + 'px';
+  slider.style.width = activeOpt.offsetWidth + 'px';
+}
+
+// =========================================================================
+// Theme toggle
+// =========================================================================
+
+const themeToggle = document.getElementById('theme-toggle');
+
+function applyThemeState() {
+  const val = isDark() ? 'dark' : 'light';
+  themeToggle.querySelectorAll('.opt').forEach(o => {
+    o.classList.toggle('active', o.dataset.val === val);
+  });
+  updateSlider(themeToggle);
+}
+
+// Default to light
+if (localStorage.getItem('tt_theme') === 'dark') {
+  document.documentElement.classList.remove('light');
+} else {
+  document.documentElement.classList.add('light');
+}
+applyThemeState();
+
+themeToggle.addEventListener('click', () => {
+  document.documentElement.classList.toggle('light');
+  const mode = isDark() ? 'dark' : 'light';
+  localStorage.setItem('tt_theme', mode);
+  applyThemeState();
+  if (lastResults) renderChart(lastResults, lastLocationName);
+});
+
+// =========================================================================
+// PNG export
+// =========================================================================
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!chartInstance) return;
+
+  const src = chartInstance.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const srcW = src.width;
+  const srcH = src.height;
+  const dark = isDark();
+
+  const titleH = Math.round(36 * dpr);
+  const captionH = Math.round(22 * dpr);
+  const footerH = Math.round(28 * dpr);
+  const padX = Math.round(12 * dpr);
+  const totalW = srcW + padX * 2;
+  const totalH = srcH + titleH + captionH + footerH;
+
+  const c = document.createElement('canvas');
+  c.width = totalW;
+  c.height = totalH;
+  const ctx = c.getContext('2d');
+
+  // Background
+  ctx.fillStyle = dark ? '#16213e' : '#ffffff';
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // Title
+  const titleSize = Math.round(15 * dpr);
+  ctx.font = `400 ${titleSize}px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = dark ? '#e8e8e8' : '#222';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Teletherm \u2014 ${lastLocationName}`, totalW / 2, titleH / 2);
+
+  // Chart
+  ctx.drawImage(src, padX, titleH);
+
+  // Caption
+  const capFontSize = Math.round(9 * dpr);
+  const capY = titleH + srcH + captionH / 2;
+  const t = theme();
+  ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+
+  // Draw colored dots + labels
+  const capText = '\u25cf Warmest day (highest daily high)    \u25cf Coldest day (lowest daily low)    Dashed: linear trends';
+  // Measure to position colored dots
+  ctx.fillStyle = dark ? '#999' : '#777';
+  ctx.fillText(capText, totalW / 2, capY);
+
+  // Footer
+  const footSize = Math.round(9 * dpr);
+  ctx.font = `${footSize}px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = dark ? '#666' : '#999';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    `Made by Teletherm, cooked with Claude by Johan Ugander. Data through ${END_YEAR}.`,
+    totalW / 2, titleH + srcH + captionH + footerH / 2
+  );
+
+  // Download
+  const link = document.createElement('a');
+  const slug = lastLocationName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().replace(/-+$/, '');
+  link.download = `teletherm-${slug}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+});
+
+// =========================================================================
+// Details modal
+// =========================================================================
+
+const detailsModal = document.getElementById('details-modal');
+
+document.getElementById('details-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  detailsModal.style.display = '';
+});
+
+document.getElementById('details-backdrop').addEventListener('click', () => {
+  detailsModal.style.display = 'none';
+});
+
+document.getElementById('details-close').addEventListener('click', () => {
+  detailsModal.style.display = 'none';
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && detailsModal.style.display !== 'none') {
+    detailsModal.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

@@ -342,6 +342,18 @@ header .subtitle {
   font-size: 0.68rem;
   color: var(--text-muted);
   opacity: 0.7;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+
+#chart-legend .leg-item:hover {
+  opacity: 1;
+}
+
+#chart-legend .leg-item.pinned {
+  opacity: 1;
+  font-weight: 600;
 }
 
 #chart-legend .leg-swatch {
@@ -352,6 +364,63 @@ header .subtitle {
 
 #chart-legend .leg-item.current .leg-swatch {
   height: 4px;
+}
+
+#chart-legend .leg-item.pinned .leg-swatch {
+  height: 5px;
+}
+
+#chart-legend.grid-mode {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0px 0.45rem;
+  margin-top: 0.4rem;
+  padding: 0 0.25rem;
+  line-height: 1.25;
+}
+
+#chart-legend.grid-mode .leg-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.52rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+#chart-legend.grid-mode .leg-cell .leg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+#chart-legend.grid-mode .leg-cell:hover {
+  opacity: 1;
+}
+
+#chart-legend.grid-mode .leg-cell.pinned {
+  opacity: 1;
+  font-weight: 700;
+}
+
+#chart-legend.grid-mode .leg-cell.pinned .leg-dot {
+  outline: 1.5px solid var(--text);
+  outline-offset: 0.5px;
+}
+
+#chart-legend.grid-mode .leg-cell.current {
+  opacity: 1;
+  font-weight: 700;
+}
+
+#chart-legend.grid-mode .leg-cell.current .leg-dot {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 0.5px;
 }
 
 #export-btn {
@@ -918,23 +987,45 @@ const COLORS = [
   '#c17d56', '#e89ac7', '#a0a0a0', '#c4bd36', '#4fc1c9',
 ];
 
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function gradient50Hex(index, total, dark) {
+  const t = total <= 1 ? 0 : index / (total - 1);
+  const hue = 220 * (1 - t);
+  const sat = 65 + 15 * t;
+  const lit = dark ? (55 + 10 * t) : (40 + 10 * t);
+  return hslToHex(hue, sat, lit);
+}
+
 // ---- Nearest-line highlight plugin ----
 
 let highlightIndex = -1; // -1 = no hover, use default (current season bold)
 let hoverDataIdx = -1;   // x-axis data index under cursor
 let hoverMouseX = 0;
 let hoverMouseY = 0;
+const pinnedSets = new Set(); // dataset indices pinned via legend clicks
 
 const highlightPlugin = {
   id: 'highlightNearest',
 
   afterEvent(chart, args) {
     const evt = args.event;
+    const hasPins = pinnedSets.size > 0;
+
     if (evt.type === 'mouseout') {
-      if (highlightIndex !== -1) {
+      if (highlightIndex !== -1 || hoverDataIdx !== -1) {
         highlightIndex = -1;
         hoverDataIdx = -1;
-        applyHighlight(chart, -1);
+        if (!hasPins) applyHighlight(chart, -1);
         args.changed = true;
       }
       return;
@@ -948,10 +1039,10 @@ const highlightPlugin = {
     const area = chart.chartArea;
     if (!area || mouseX < area.left || mouseX > area.right ||
         mouseY < area.top || mouseY > area.bottom) {
-      if (highlightIndex !== -1) {
+      if (highlightIndex !== -1 || hoverDataIdx !== -1) {
         highlightIndex = -1;
         hoverDataIdx = -1;
-        applyHighlight(chart, -1);
+        if (!hasPins) applyHighlight(chart, -1);
         args.changed = true;
       }
       return;
@@ -970,10 +1061,12 @@ const highlightPlugin = {
     }
 
     // Find nearest dataset by y-distance at this x index
+    // When pins are active, only consider pinned datasets
     let nearest = -1;
     let nearestDist = Infinity;
     const datasets = chart.data.datasets;
     for (let i = 0; i < datasets.length; i++) {
+      if (hasPins && !pinnedSets.has(i)) continue;
       const val = datasets[i].data[dataIdx];
       if (val == null) continue;
       const yPixel = chart.scales.y.getPixelForValue(val);
@@ -988,21 +1081,25 @@ const highlightPlugin = {
     hoverDataIdx = dataIdx;
     if (changed) {
       highlightIndex = nearest;
-      applyHighlight(chart, nearest);
+      if (!hasPins) applyHighlight(chart, nearest);
       args.changed = true;
     }
   },
 
   afterDraw(chart) {
+    const area = chart.chartArea;
+    const ctx = chart.ctx;
+    const dark = isDark();
+    const fontMain = '11px system-ui, sans-serif';
+    const fontSub = '10px system-ui, sans-serif';
+
+    // Info box for hovered (or nearest pinned) dataset
     const idx = highlightIndex;
     if (idx === -1 || hoverDataIdx === -1) return;
     const meta = chart.getDatasetMeta(idx);
     if (!meta.visible) return;
     const ds = chart.data.datasets[idx];
-    const area = chart.chartArea;
-    const ctx = chart.ctx;
 
-    // Info box near the hovered data point
     const val = ds.data[hoverDataIdx];
     if (val == null) return;
     const pt = meta.data[hoverDataIdx];
@@ -1039,10 +1136,7 @@ const highlightPlugin = {
       }
     }
 
-    const dark = isDark();
     ctx.save();
-    const fontMain = '11px system-ui, sans-serif';
-    const fontSub = '10px system-ui, sans-serif';
     ctx.font = fontMain;
     const tw1 = ctx.measureText(line1).width;
     ctx.font = fontSub;
@@ -1100,15 +1194,26 @@ function applyHighlight(chart, hoveredIdx) {
   const dark = isDark();
   const restAlpha = is50 ? (dark ? '45' : '30') : t.fadeAlpha;
   const restWidth = is50 ? 0.8 : 1.3;
+  const hasPins = pinnedSets.size > 0;
 
   for (let i = 0; i < datasets.length; i++) {
     const ds = datasets[i];
     const isCurrent = !!ds._isCurrent;
     const isLastK = !!ds._isLastK;
     const isHovered = i === hoveredIdx;
+    const isPinned = pinnedSets.has(i);
     if (isCurrent) ds._baseColor = t.currentLine;
 
-    if (hoveredIdx === -1) {
+    if (hasPins) {
+      // Pinned mode: pinned datasets highlighted, everything else dimmed
+      if (isPinned) {
+        ds.borderColor = ds._baseColor;
+        ds.borderWidth = 3;
+      } else {
+        ds.borderColor = ds._baseColor + (is50 ? (dark ? '28' : '18') : t.dimAlpha);
+        ds.borderWidth = isLastK ? 1.5 : (is50 ? 0.6 : 1.1);
+      }
+    } else if (hoveredIdx === -1) {
       // No hover — default styling
       if (isCurrent) {
         ds.borderColor = t.currentLine;
@@ -1152,7 +1257,7 @@ function renderChart(allResults, locationName) {
 
   const is50 = numSeasons === 50;
   const dark = isDark();
-  const spaghettiColor = dark ? '#888888' : '#999999';
+  const histCount = allResults.length - 1; // number of non-current seasons
 
   // Compute all-time lows: for each k, is the current season the min?
   const currentResult = allResults[allResults.length - 1];
@@ -1171,7 +1276,7 @@ function renderChart(allResults, locationName) {
   const datasets = allResults.map((r, idx) => {
     const isCurrent = idx === allResults.length - 1;
     const baseColor = isCurrent ? t.currentLine
-      : is50 ? spaghettiColor : COLORS[idx % COLORS.length];
+      : is50 ? gradient50Hex(idx, histCount, dark) : COLORS[idx % COLORS.length];
     const displayData = r.v.slice(0, CONFIG.MAX_K).map(toDisplay);
     const ds = {
       label: r.season.label,
@@ -1181,7 +1286,7 @@ function renderChart(allResults, locationName) {
       _seasonStart: r.season.start,
       _baseColor: baseColor,
       borderColor: isCurrent ? t.currentLine
-        : is50 ? spaghettiColor + (dark ? '45' : '30') : baseColor + t.fadeAlpha,
+        : is50 ? baseColor + (dark ? '45' : '30') : baseColor + t.fadeAlpha,
       borderWidth: isCurrent ? 3.5 : (is50 ? 0.8 : 1.3),
       backgroundColor: 'transparent',
       pointRadius: 0,
@@ -1280,19 +1385,79 @@ function renderChart(allResults, locationName) {
     },
   });
 
-  // Populate static legend (10y only)
+  // Clear any prior pins
+  pinnedSets.clear();
+
+  // Populate legend with click-to-pin
   const legendEl = document.getElementById('chart-legend');
   legendEl.innerHTML = '';
-  if (!is50) {
-    datasets.forEach((ds) => {
-      if (ds._isLastK) return; // last-k line not in legend
+
+  const pinClickHandler = (dsIndex, el) => (e) => {
+    e.stopPropagation();
+    if (pinnedSets.has(dsIndex)) {
+      pinnedSets.delete(dsIndex);
+      el.classList.remove('pinned');
+    } else {
+      pinnedSets.add(dsIndex);
+      el.classList.add('pinned');
+    }
+    highlightIndex = -1;
+    hoverDataIdx = -1;
+    applyHighlight(chartInstance, -1);
+  };
+
+  if (is50) {
+    // 50y: compact labeled cells
+    legendEl.className = 'grid-mode';
+    datasets.forEach((ds, dsIndex) => {
+      if (ds._isLastK) return;
+      const cell = document.createElement('span');
+      cell.className = 'leg-cell' + (ds._isCurrent ? ' current' : '');
+      // Short label: "75–76" from "Winter 1975-76"
+      const tag = ds.label.replace('Winter ', '').replace(/\d{2}(\d{2})-(\d{2})/, '$1\u2013$2');
+      cell.innerHTML = `<span class="leg-dot" style="background:${ds._baseColor}"></span>${tag}`;
+      cell.title = ds.label;
+      cell.addEventListener('click', pinClickHandler(dsIndex, cell));
+      // Hover preview: highlight line on chart without pinning
+      cell.addEventListener('mouseenter', () => {
+        if (pinnedSets.size === 0) {
+          highlightIndex = dsIndex;
+          applyHighlight(chartInstance, dsIndex);
+        }
+      });
+      cell.addEventListener('mouseleave', () => {
+        if (pinnedSets.size === 0) {
+          highlightIndex = -1;
+          applyHighlight(chartInstance, -1);
+        }
+      });
+      legendEl.appendChild(cell);
+    });
+  } else {
+    // 10y: named color swatches
+    legendEl.className = '';
+    datasets.forEach((ds, dsIndex) => {
+      if (ds._isLastK) return;
       const span = document.createElement('span');
       span.className = 'leg-item' + (ds._isCurrent ? ' current' : '');
       const tag = ds.label.replace('Winter ', '');
       span.innerHTML = `<span class="leg-swatch" style="background:${ds._baseColor}"></span>${tag}`;
+      span.addEventListener('click', pinClickHandler(dsIndex, span));
       legendEl.appendChild(span);
     });
   }
+
+  // Click on chart canvas clears all pins
+  const canvas = document.getElementById('thermochron-chart');
+  canvas.onclick = (e) => {
+    if (pinnedSets.size > 0) {
+      pinnedSets.clear();
+      legendEl.querySelectorAll('.pinned').forEach(el => el.classList.remove('pinned'));
+      highlightIndex = -1;
+      hoverDataIdx = -1;
+      applyHighlight(chartInstance, -1);
+    }
+  };
 }
 
 // =========================================================================
@@ -1597,7 +1762,8 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const is10 = numSeasons === 10;
 
   const titleH = Math.round(36 * dpr);
-  const captionH = Math.round(22 * dpr);
+  const need50yBar = !is10 && pinnedSets.size === 0;
+  const captionH = Math.round((need50yBar ? 30 : 22) * dpr);
   const footerH = Math.round(28 * dpr);
   const padX = Math.round(12 * dpr);
   const totalW = srcW + padX * 2;
@@ -1628,35 +1794,23 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const capFontSize = Math.round(8.5 * dpr);
   const capY = titleH + srcH + captionH / 2;
 
-  if (is10) {
-    // 10y: season color swatches + optional "Last k days"
-    const swatchW = Math.round(14 * dpr);
-    const swatchH = Math.round(3 * dpr);
-    const gap = Math.round(6 * dpr);
-    const itemGap = Math.round(12 * dpr);
+  const hasPins = pinnedSets.size > 0;
+  const swatchW = Math.round(14 * dpr);
+  const swatchH = Math.round(3 * dpr);
+  const gap = Math.round(6 * dpr);
+  const itemGap = Math.round(12 * dpr);
 
+  // Helper: draw a row of swatch+label items centered at capY
+  function drawSwatchRow(items) {
     ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
     let totalLegW = 0;
-    const items = ds.filter(d => !d._isLastK).map((d) => {
-      const tag = d.label.replace('Winter ', '');
-      const tw = ctx.measureText(tag).width;
-      totalLegW += swatchW + gap + tw;
-      return { tag, tw, color: d._baseColor, isCurrent: !!d._isCurrent };
-    });
-    // Add "Last k days" entry if active
-    const lastKDs = ds.find(d => d._isLastK);
-    if (lastKDs) {
-      const lkTag = 'Last k days';
-      const lkTw = ctx.measureText(lkTag).width;
-      totalLegW += swatchW + gap + lkTw;
-      items.push({ tag: lkTag, tw: lkTw, color: lastKDs._baseColor, isCurrent: false, isDashed: true });
-    }
-    totalLegW += itemGap * (items.length - 1);
+    items.forEach(item => { totalLegW += swatchW + gap + item.tw; });
+    totalLegW += itemGap * Math.max(items.length - 1, 0);
 
     let x = (totalW - totalLegW) / 2;
     items.forEach((item) => {
+      ctx.globalAlpha = item.dimmed ? 0.35 : 1.0;
       if (item.isDashed) {
-        // Draw dashed line swatch
         ctx.strokeStyle = item.color;
         ctx.lineWidth = Math.round(2 * dpr);
         ctx.setLineDash([Math.round(4 * dpr), Math.round(3 * dpr)]);
@@ -1666,13 +1820,11 @@ document.getElementById('export-btn').addEventListener('click', () => {
         ctx.stroke();
         ctx.setLineDash([]);
       } else {
-        // Solid swatch
         ctx.fillStyle = item.color;
         const sh = item.isCurrent ? swatchH + Math.round(1 * dpr) : swatchH;
         ctx.fillRect(Math.round(x), Math.round(capY - sh / 2), swatchW, sh);
       }
       x += swatchW + gap;
-      // Label
       ctx.fillStyle = dark ? '#999' : '#777';
       if (item.isCurrent) ctx.font = `600 ${capFontSize}px system-ui, -apple-system, sans-serif`;
       else ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1680,19 +1832,65 @@ document.getElementById('export-btn').addEventListener('click', () => {
       ctx.textBaseline = 'middle';
       ctx.fillText(item.tag, Math.round(x), capY);
       x += item.tw + itemGap;
+      ctx.globalAlpha = 1.0;
     });
     ctx.textAlign = 'center';
+  }
+
+  ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
+
+  if (is10) {
+    // 10y: season color swatches (dimmed if pinned and not this one)
+    const items = ds.filter(d => !d._isLastK).map((d, i) => {
+      const tag = d.label.replace('Winter ', '');
+      const tw = ctx.measureText(tag).width;
+      return { tag, tw, color: d._baseColor, isCurrent: !!d._isCurrent, dimmed: hasPins && !pinnedSets.has(i) };
+    });
+    const lastKDs = ds.find(d => d._isLastK);
+    if (lastKDs) {
+      const lkTag = 'Last k days';
+      const lkTw = ctx.measureText(lkTag).width;
+      items.push({ tag: lkTag, tw: lkTw, color: lastKDs._baseColor, isCurrent: false, isDashed: true, dimmed: false });
+    }
+    drawSwatchRow(items);
+  } else if (hasPins) {
+    // 50y with pins: show pinned season swatches + "N others" summary
+    const pinnedItems = [];
+    ds.forEach((d, i) => {
+      if (d._isLastK || !pinnedSets.has(i)) return;
+      const tag = d.label.replace('Winter ', '');
+      const tw = ctx.measureText(tag).width;
+      pinnedItems.push({ tag, tw, color: d._baseColor, isCurrent: !!d._isCurrent, dimmed: false });
+    });
+    const othersCount = ds.filter((d, i) => !d._isLastK && !pinnedSets.has(i)).length;
+    if (othersCount > 0) {
+      const suffix = `+ ${othersCount} others`;
+      const stw = ctx.measureText(suffix).width;
+      pinnedItems.push({ tag: suffix, tw: stw, color: dark ? '#555' : '#bbb', isCurrent: false, dimmed: true });
+    }
+    drawSwatchRow(pinnedItems);
   } else {
-    // 50y: text caption
-    ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
+    // 50y no pins: gradient bar with year labels
+    const histDs = ds.filter(d => !d._isLastK && !d._isCurrent);
+    const barW = Math.round(200 * dpr);
+    const barH = Math.round(4 * dpr);
+    const barX = (totalW - barW) / 2;
+    const barY = capY - barH / 2 - Math.round(3 * dpr);
+    for (let px = 0; px < barW; px++) {
+      const gi = Math.floor(px / barW * histDs.length);
+      ctx.fillStyle = histDs[Math.min(gi, histDs.length - 1)]._baseColor;
+      ctx.fillRect(barX + px, barY, 1, barH);
+    }
     ctx.fillStyle = dark ? '#999' : '#777';
+    ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.textBaseline = 'top';
+    const labelY = barY + barH + Math.round(2 * dpr);
+    ctx.textAlign = 'left';
+    ctx.fillText(histDs[0].label.replace('Winter ', ''), barX, labelY);
+    ctx.textAlign = 'right';
+    ctx.fillText(histDs[histDs.length - 1].label.replace('Winter ', ''), barX + barW, labelY);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const hasLastK = ds.some(d => d._isLastK);
-    const capText = hasLastK
-      ? 'Bold: current season \u00b7 Gray: historical seasons \u00b7 Dashed: last k days'
-      : 'Bold: current season \u00b7 Gray: historical seasons';
-    ctx.fillText(capText, totalW / 2, capY);
   }
 
   // Footer
