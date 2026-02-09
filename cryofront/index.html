@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cryofront</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2300cfd8'/%3E%3Cstop offset='100%25' stop-color='%230088a0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg stroke='url(%23g)' stroke-width='2.2' stroke-linecap='round' fill='none'%3E%3Cline x1='16' y1='2' x2='16' y2='30'/%3E%3Cline x1='3.9' y1='9' x2='28.1' y2='23'/%3E%3Cline x1='3.9' y1='23' x2='28.1' y2='9'/%3E%3Cline x1='16' y1='2' x2='12.5' y2='6'/%3E%3Cline x1='16' y1='2' x2='19.5' y2='6'/%3E%3Cline x1='16' y1='30' x2='12.5' y2='26'/%3E%3Cline x1='16' y1='30' x2='19.5' y2='26'/%3E%3Cline x1='3.9' y1='9' x2='5.2' y2='13.4'/%3E%3Cline x1='3.9' y1='9' x2='8.4' y2='8.5'/%3E%3Cline x1='28.1' y1='23' x2='26.8' y2='18.6'/%3E%3Cline x1='28.1' y1='23' x2='23.6' y2='23.5'/%3E%3Cline x1='3.9' y1='23' x2='8.4' y2='23.5'/%3E%3Cline x1='3.9' y1='23' x2='5.2' y2='18.6'/%3E%3Cline x1='28.1' y1='9' x2='23.6' y2='8.5'/%3E%3Cline x1='28.1' y1='9' x2='26.8' y2='13.4'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -80,6 +81,16 @@ header h1 {
   font-weight: 300;
   letter-spacing: 0.05em;
   color: var(--text-heading);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.logo-icon {
+  width: 1.6em;
+  height: 1.6em;
+  flex-shrink: 0;
 }
 
 header .subtitle {
@@ -492,7 +503,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
 
 <div id="app">
   <header>
-    <h1>Cryofront</h1>
+    <h1><svg class="logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00cfd8"/><stop offset="100%" stop-color="#0088a0"/></linearGradient></defs><g stroke="url(#lg)" stroke-width="2.2" stroke-linecap="round" fill="none"><line x1="16" y1="2" x2="16" y2="30"/><line x1="3.9" y1="9" x2="28.1" y2="23"/><line x1="3.9" y1="23" x2="28.1" y2="9"/><line x1="16" y1="2" x2="12.5" y2="6"/><line x1="16" y1="2" x2="19.5" y2="6"/><line x1="16" y1="30" x2="12.5" y2="26"/><line x1="16" y1="30" x2="19.5" y2="26"/><line x1="3.9" y1="9" x2="5.2" y2="13.4"/><line x1="3.9" y1="9" x2="8.4" y2="8.5"/><line x1="28.1" y1="23" x2="26.8" y2="18.6"/><line x1="28.1" y1="23" x2="23.6" y2="23.5"/><line x1="3.9" y1="23" x2="8.4" y2="23.5"/><line x1="3.9" y1="23" x2="5.2" y2="18.6"/><line x1="28.1" y1="9" x2="23.6" y2="8.5"/><line x1="28.1" y1="9" x2="26.8" y2="13.4"/></g></svg>Cryofront</h1>
     <p class="subtitle">The Pareto frontier of sustained cold.</p>
     <div id="theme-toggle-wrap">
       <div class="slide-toggle" id="theme-toggle">
@@ -1573,11 +1584,11 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const is10 = numSeasons === 10;
 
   const titleH = Math.round(36 * dpr);
-  const legendH = is10 ? Math.round(22 * dpr) : 0;
+  const captionH = Math.round(22 * dpr);
   const footerH = Math.round(28 * dpr);
   const padX = Math.round(12 * dpr);
   const totalW = srcW + padX * 2;
-  const totalH = srcH + titleH + legendH + footerH;
+  const totalH = srcH + titleH + captionH + footerH;
 
   const c = document.createElement('canvas');
   c.width = totalW;
@@ -1599,18 +1610,19 @@ document.getElementById('export-btn').addEventListener('click', () => {
   // Chart
   ctx.drawImage(src, padX, titleH);
 
-  // Legend (10y only)
+  // Caption area
+  const ds = chartInstance.data.datasets;
+  const capFontSize = Math.round(8.5 * dpr);
+  const capY = titleH + srcH + captionH / 2;
+
   if (is10) {
-    const ds = chartInstance.data.datasets;
-    const legFontSize = Math.round(8.5 * dpr);
+    // 10y: season color swatches + optional "Last k days"
     const swatchW = Math.round(14 * dpr);
     const swatchH = Math.round(3 * dpr);
     const gap = Math.round(6 * dpr);
     const itemGap = Math.round(12 * dpr);
-    const legY = titleH + srcH + legendH / 2;
 
-    // Measure total width
-    ctx.font = `${legFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
     let totalLegW = 0;
     const items = ds.filter(d => !d._isLastK).map((d) => {
       const tag = d.label.replace('Winter ', '');
@@ -1618,25 +1630,56 @@ document.getElementById('export-btn').addEventListener('click', () => {
       totalLegW += swatchW + gap + tw;
       return { tag, tw, color: d._baseColor, isCurrent: !!d._isCurrent };
     });
+    // Add "Last k days" entry if active
+    const lastKDs = ds.find(d => d._isLastK);
+    if (lastKDs) {
+      const lkTag = 'Last k days';
+      const lkTw = ctx.measureText(lkTag).width;
+      totalLegW += swatchW + gap + lkTw;
+      items.push({ tag: lkTag, tw: lkTw, color: lastKDs._baseColor, isCurrent: false, isDashed: true });
+    }
     totalLegW += itemGap * (items.length - 1);
 
     let x = (totalW - totalLegW) / 2;
-    items.forEach((item, i) => {
-      // Swatch
-      ctx.fillStyle = item.color;
-      const sh = item.isCurrent ? swatchH + Math.round(1 * dpr) : swatchH;
-      ctx.fillRect(Math.round(x), Math.round(legY - sh / 2), swatchW, sh);
+    items.forEach((item) => {
+      if (item.isDashed) {
+        // Draw dashed line swatch
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = Math.round(2 * dpr);
+        ctx.setLineDash([Math.round(4 * dpr), Math.round(3 * dpr)]);
+        ctx.beginPath();
+        ctx.moveTo(Math.round(x), Math.round(capY));
+        ctx.lineTo(Math.round(x + swatchW), Math.round(capY));
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // Solid swatch
+        ctx.fillStyle = item.color;
+        const sh = item.isCurrent ? swatchH + Math.round(1 * dpr) : swatchH;
+        ctx.fillRect(Math.round(x), Math.round(capY - sh / 2), swatchW, sh);
+      }
       x += swatchW + gap;
       // Label
       ctx.fillStyle = dark ? '#999' : '#777';
-      if (item.isCurrent) ctx.font = `600 ${legFontSize}px system-ui, -apple-system, sans-serif`;
-      else ctx.font = `${legFontSize}px system-ui, -apple-system, sans-serif`;
+      if (item.isCurrent) ctx.font = `600 ${capFontSize}px system-ui, -apple-system, sans-serif`;
+      else ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(item.tag, Math.round(x), legY);
+      ctx.fillText(item.tag, Math.round(x), capY);
       x += item.tw + itemGap;
     });
     ctx.textAlign = 'center';
+  } else {
+    // 50y: text caption
+    ctx.font = `${capFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = dark ? '#999' : '#777';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const hasLastK = ds.some(d => d._isLastK);
+    const capText = hasLastK
+      ? 'Bold: current season \u00b7 Gray: historical seasons \u00b7 Dashed: last k days'
+      : 'Bold: current season \u00b7 Gray: historical seasons';
+    ctx.fillText(capText, totalW / 2, capY);
   }
 
   // Footer
@@ -1645,7 +1688,9 @@ document.getElementById('export-btn').addEventListener('click', () => {
   ctx.fillStyle = dark ? '#666' : '#999';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Made by Cryofront, cooked with Claude by Johan Ugander.', totalW / 2, titleH + srcH + legendH + footerH / 2);
+  const genDate = new Date().toLocaleDateString();
+  const genTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+  ctx.fillText(`Made by Cryofront, cooked with Claude by Johan Ugander. Generated ${genDate} at ${genTime}.`, totalW / 2, titleH + srcH + captionH + footerH / 2);
 
   // Download
   const link = document.createElement('a');
