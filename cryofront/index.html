@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryofront</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* --- Theme variables --- */
+
+:root {
+  --bg: #1a1a2e;
+  --bg-card: #16213e;
+  --text: #e0e0e0;
+  --text-heading: #f0f0f0;
+  --text-muted: #888;
+  --text-card: #aaa;
+  --text-card-strong: #ccc;
+  --input-bg: #16213e;
+  --input-border: #333;
+  --input-text: #f0f0f0;
+  --input-placeholder: #666;
+  --accent: #00adb5;
+  --accent-hover: #00c9d4;
+  --footer-text: #666;
+  --footer-link: #888;
+  --footer-link-hover: #aaa;
+  --spinner-color: #f0c040;
+  --status-loading: #f0c040;
+  --status-error: #ff6b6b;
+  --location-color: #e8e8e8;
+}
+
+html.light {
+  --bg: #f4f4f8;
+  --bg-card: #ffffff;
+  --text: #333;
+  --text-heading: #1a1a2e;
+  --text-muted: #777;
+  --text-card: #666;
+  --text-card-strong: #444;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --input-text: #333;
+  --input-placeholder: #999;
+  --accent: #0088a0;
+  --accent-hover: #006a7d;
+  --footer-text: #999;
+  --footer-link: #777;
+  --footer-link-hover: #555;
+  --spinner-color: #c89b00;
+  --status-loading: #b08800;
+  --status-error: #d33;
+  --location-color: #222;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+
+#app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+header h1 {
+  font-size: 2.2rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: var(--text-heading);
+}
+
+header .subtitle {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- Slide toggles --- */
+
+.slide-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--input-border);
+  border-radius: 20px;
+  background: var(--input-bg);
+  cursor: pointer;
+  padding: 2px;
+  position: relative;
+  transition: border-color 0.2s, background 0.3s;
+  user-select: none;
+}
+
+.slide-toggle:hover { border-color: var(--accent); }
+
+.slide-toggle .opt {
+  position: relative;
+  z-index: 1;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.25s;
+  line-height: 1;
+}
+
+.slide-toggle .opt.active { color: var(--text-heading); }
+
+.slide-toggle .slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 16px;
+  background: var(--accent);
+  opacity: 0.25;
+  transition: left 0.25s ease, width 0.25s ease;
+  pointer-events: none;
+}
+
+#theme-toggle-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* --- Input --- */
+
+#zip-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+#loc-wrap {
+  position: relative;
+}
+
+#loc-input {
+  width: 240px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  outline: none;
+  transition: border-color 0.2s, background 0.3s, color 0.3s;
+}
+
+#loc-input:focus {
+  border-color: var(--accent);
+}
+
+#loc-input::placeholder {
+  color: var(--input-placeholder);
+}
+
+#loc-suggestions {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+#loc-suggestions li {
+  padding: 0.5rem 0.8rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#loc-suggestions li:hover,
+#loc-suggestions li.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+#loc-suggestions li .loc-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+}
+
+#loc-suggestions li:hover .loc-sub,
+#loc-suggestions li.active .loc-sub {
+  color: rgba(255,255,255,0.7);
+}
+
+#go-btn {
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+#go-btn:hover { background: var(--accent-hover); }
+#go-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+
+/* --- Status --- */
+
+#status-area {
+  text-align: center;
+  min-height: 1.4rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+#status-area.loading { color: var(--status-loading); }
+#status-area.error { color: var(--status-error); }
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--spinner-color);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Chart --- */
+
+#chart-container {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem 1rem 1rem;
+  margin-top: 0.5rem;
+  transition: background 0.3s;
+}
+
+#location-name {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--location-color);
+  margin-bottom: 1rem;
+}
+
+#chart-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* --- Chart legend --- */
+
+#chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 0.7rem;
+  margin-top: 0.5rem;
+  padding: 0 0.5rem;
+}
+
+#chart-legend .leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+#chart-legend .leg-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+#chart-legend .leg-item.current .leg-swatch {
+  height: 4px;
+}
+
+#export-btn {
+  display: block;
+  margin: 0.5rem auto 0;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.72rem;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+#export-btn:hover { opacity: 1; border-color: var(--accent); }
+
+/* --- Explanation --- */
+
+#explanation {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  color: var(--text-card);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  transition: background 0.3s;
+}
+
+#explanation strong { color: var(--text-card-strong); }
+
+/* --- Footer --- */
+
+footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: var(--footer-text);
+}
+
+footer a {
+  color: var(--footer-link);
+  text-decoration: none;
+}
+
+footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
+
+/* --- Responsive --- */
+
+@media (max-width: 600px) {
+  #app { padding: 1rem 0.75rem; }
+  header h1 { font-size: 1.6rem; }
+  #loc-input { width: 180px; }
+  #chart-container { padding: 1rem 0.5rem 0.5rem; border-radius: 8px; }
+  #location-name { font-size: 1.1rem; }
+  #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1>Cryofront</h1>
+    <p class="subtitle">The Pareto frontier of sustained cold.</p>
+    <div id="theme-toggle-wrap">
+      <div class="slide-toggle" id="theme-toggle">
+        <div class="slider"></div>
+        <span class="opt" data-val="dark">Dark</span>
+        <span class="opt" data-val="light">Light</span>
+      </div>
+    </div>
+  </header>
+
+  <form id="zip-form">
+    <div id="loc-wrap">
+      <input type="text" id="loc-input" placeholder="ZIP code or city name" autocomplete="off" spellcheck="false">
+      <ul id="loc-suggestions"></ul>
+    </div>
+    <button type="submit" id="go-btn">Go</button>
+    <div class="slide-toggle" id="unit-toggle">
+      <div class="slider"></div>
+      <span class="opt" data-val="F">°F</span>
+      <span class="opt" data-val="C">°C</span>
+    </div>
+    <div class="slide-toggle" id="range-toggle">
+      <div class="slider"></div>
+      <span class="opt" data-val="10">10 year</span>
+      <span class="opt" data-val="50">50 year</span>
+    </div>
+  </form>
+
+  <div id="status-area"></div>
+
+  <div id="chart-container" style="display:none;">
+    <h2 id="location-name"></h2>
+    <div id="chart-wrapper">
+      <canvas id="thermochron-chart"></canvas>
+    </div>
+    <div id="chart-legend"></div>
+    <button id="export-btn" title="Save as PNG">Save PNG</button>
+  </div>
+
+  <div id="explanation" style="display:none;">
+    <strong>What is a cryofront?</strong> A <em>minimax curve</em> for winter cold:
+    for each streak length <em>k</em>, find the coldest <em>k</em>-day window in the season
+    and report its peak daily high. This is a
+    <em>Pareto frontier</em>&mdash;you can&rsquo;t have a longer cold streak without
+    allowing a higher ceiling temperature.
+    Where a curve crosses <strong>32&deg;F</strong>,
+    that&rsquo;s how many consecutive days the temperature never rose above freezing.
+    The bold line is the current season (Oct&ndash;Mar).
+  </div>
+
+  <footer>
+    Last updated Feb 9, 2026. Cooked with Claude by Johan Ugander. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
+    (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+// =========================================================================
+// Configuration
+// =========================================================================
+
+const CONFIG = {
+  GEOCODING_URL: 'https://geocoding-api.open-meteo.com/v1/search',
+  ARCHIVE_URL: 'https://archive-api.open-meteo.com/v1/archive',
+  TIMEZONE: 'America/New_York',
+  MAX_K: 42,
+  CACHE_MAX_AGE_MS: 3600 * 1000,
+};
+
+let chartInstance = null;
+let lastResults = null;    // for re-rendering on theme/unit change
+let lastLocationName = '';
+let useCelsius = false;
+let numSeasons = 10;
+
+// Cache both 10y and 50y results per location so toggling doesn't re-fetch
+let cachedResults10 = null;
+let cachedResults50 = null;
+let cachedLocation = null;
+
+function toDisplay(f) { return useCelsius ? (f - 32) * 5 / 9 : f; }
+function unitLabel() { return useCelsius ? '\u00b0C' : '\u00b0F'; }
+function freezingTemp() { return useCelsius ? 0 : 32; }
+
+function isDark() { return !document.documentElement.classList.contains('light'); }
+
+function theme() {
+  const dark = isDark();
+  return {
+    currentLine: dark ? '#ffffff' : '#1a1a2e',
+    axisText: dark ? '#888' : '#777',
+    axisTitle: dark ? '#999' : '#666',
+    grid: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    freezeLine: dark ? 'rgba(200,200,200,0.5)' : 'rgba(100,100,100,0.4)',
+    freezeLabel: dark ? 'rgba(200,200,200,0.7)' : 'rgba(80,80,80,0.7)',
+    dimAlpha: dark ? '50' : '40',   // hex alpha for non-highlighted on hover
+    fadeAlpha: dark ? '99' : '73',   // hex alpha for historical lines at rest
+  };
+}
+
+// =========================================================================
+// Cache (localStorage)
+// =========================================================================
+
+function readCache(key, maxAgeMs) {
+  try {
+    const raw = localStorage.getItem('tc_' + key);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (maxAgeMs != null) {
+      if (Date.now() - entry.ts > maxAgeMs) return null;
+    }
+    return entry.d;
+  } catch { return null; }
+}
+
+function writeCache(key, data) {
+  try {
+    localStorage.setItem('tc_' + key, JSON.stringify({ d: data, ts: Date.now() }));
+  } catch { /* full or unavailable */ }
+}
+
+// =========================================================================
+// Helpers
+// =========================================================================
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// =========================================================================
+// Geocoding
+// =========================================================================
+
+function isZip(s) { return /^\d{5}$/.test(s); }
+
+async function geocodeQuery(query) {
+  const key = query.trim().toLowerCase();
+  const cacheKey = `geo_${key}`;
+  const cached = readCache(cacheKey);
+  if (cached) return cached;
+
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
+  if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
+  const data = await resp.json();
+  const results = data.results || [];
+
+  const zip = isZip(query) ? query : null;
+
+  // First pass: US result with matching postcode (if ZIP)
+  if (zip) {
+    for (const r of results) {
+      if (r.country_code === 'US' && (r.postcodes || []).includes(zip)) {
+        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+        writeCache(cacheKey, loc);
+        return loc;
+      }
+    }
+  }
+  // Fallback: first US result
+  for (const r of results) {
+    if (r.country_code === 'US') {
+      const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+      writeCache(cacheKey, loc);
+      return loc;
+    }
+  }
+  throw new Error(`No US location found for "${query}"`);
+}
+
+// Autocomplete search — returns array of {name, admin1, lat, lon}
+async function geocodeSearch(query) {
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return (data.results || [])
+    .filter(r => r.country_code === 'US')
+    .slice(0, 5)
+    .map(r => ({ name: r.name, admin1: r.admin1 || '', lat: r.latitude, lon: r.longitude }));
+}
+
+// Selected location from autocomplete (bypass geocoding on submit)
+let selectedLoc = null;
+
+// =========================================================================
+// Seasons
+// =========================================================================
+
+function makeWinterSeasons(count, ref) {
+  ref = ref || new Date();
+  const currentYear = ref.getMonth() >= 9 ? ref.getFullYear() : ref.getFullYear() - 1;
+  const seasons = [];
+  for (let y = currentYear - count + 1; y <= currentYear; y++) {
+    const start = new Date(y, 9, 1);          // Oct 1
+    const nomEnd = new Date(y + 1, 2, 31);    // Mar 31
+    const end = nomEnd < ref ? nomEnd : ref;
+    const label = `Winter ${y}-${String((y + 1) % 100).padStart(2, '0')}`;
+    seasons.push({ label, start, end, year: y });
+  }
+  return seasons;
+}
+
+// =========================================================================
+// Weather data
+// =========================================================================
+
+async function fetchDailyHighs(loc, startDate, endDate) {
+  const lat = loc.lat.toFixed(4);
+  const lon = loc.lon.toFixed(4);
+  const s = isoDate(startDate);
+  const e = isoDate(endDate);
+
+  const cacheKey = `h_${lat}_${lon}_${s}_${e}`;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isRecent = endDate >= yesterday;
+  const cached = readCache(cacheKey, isRecent ? CONFIG.CACHE_MAX_AGE_MS : undefined);
+  if (cached) return cached;
+
+  const url = `${CONFIG.ARCHIVE_URL}?latitude=${lat}&longitude=${lon}` +
+    `&start_date=${s}&end_date=${e}` +
+    `&daily=temperature_2m_max&temperature_unit=fahrenheit` +
+    `&timezone=${CONFIG.TIMEZONE}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Weather API error (HTTP ${resp.status})`);
+  const data = await resp.json();
+  if (!data.daily) throw new Error('Unexpected API response');
+
+  const temps = [];
+  const rawTemps = data.daily.temperature_2m_max;
+  for (let i = 0; i < rawTemps.length; i++) {
+    if (rawTemps[i] !== null) temps.push(rawTemps[i]);
+  }
+  if (temps.length === 0) throw new Error('No temperature data available');
+
+  writeCache(cacheKey, temps);
+  return temps;
+}
+
+// =========================================================================
+// Thermochron computation
+// =========================================================================
+
+function computeThermochron(dailyHighs) {
+  const n = dailyHighs.length;
+  if (n === 0) return { k: [], v: [], starts: [] };
+
+  const maxK = Math.min(CONFIG.MAX_K, n);
+  const kValues = [];
+  const thermoValues = [];
+  const startIndices = [];  // index of best window start for each k
+
+  for (let k = 1; k <= maxK; k++) {
+    let minOfMax = Infinity;
+    let bestStart = 0;
+    for (let i = 0; i <= n - k; i++) {
+      let wMax = -Infinity;
+      for (let j = i; j < i + k; j++) {
+        if (dailyHighs[j] > wMax) wMax = dailyHighs[j];
+      }
+      if (wMax < minOfMax) { minOfMax = wMax; bestStart = i; }
+    }
+    kValues.push(k);
+    thermoValues.push(minOfMax);
+    startIndices.push(bestStart);
+  }
+
+  return { k: kValues, v: thermoValues, starts: startIndices };
+}
+
+// =========================================================================
+// UI helpers
+// =========================================================================
+
+const statusEl = document.getElementById('status-area');
+const chartContainer = document.getElementById('chart-container');
+const explanationEl = document.getElementById('explanation');
+
+function showStatus(msg) {
+  statusEl.className = 'loading';
+  statusEl.innerHTML = '<span class="spinner"></span>' + msg;
+}
+
+function showError(msg) {
+  statusEl.className = 'error';
+  statusEl.textContent = msg;
+}
+
+function clearStatus() {
+  statusEl.className = '';
+  statusEl.innerHTML = '';
+}
+
+function showChart() { chartContainer.style.display = ''; explanationEl.style.display = ''; }
+function hideChart() { chartContainer.style.display = 'none'; explanationEl.style.display = 'none'; }
+
+// =========================================================================
+// Chart rendering
+// =========================================================================
+
+const COLORS = [
+  '#5b9bd5', '#ed7d31', '#70ad47', '#e84d60', '#9e7cc1',
+  '#c17d56', '#e89ac7', '#a0a0a0', '#c4bd36', '#4fc1c9',
+];
+
+// ---- Nearest-line highlight plugin ----
+
+let highlightIndex = -1; // -1 = no hover, use default (current season bold)
+let hoverDataIdx = -1;   // x-axis data index under cursor
+let hoverMouseX = 0;
+let hoverMouseY = 0;
+
+const highlightPlugin = {
+  id: 'highlightNearest',
+
+  afterEvent(chart, args) {
+    const evt = args.event;
+    if (evt.type === 'mouseout') {
+      if (highlightIndex !== -1) {
+        highlightIndex = -1;
+        hoverDataIdx = -1;
+        applyHighlight(chart, -1);
+        args.changed = true;
+      }
+      return;
+    }
+    if (evt.type !== 'mousemove') return;
+
+    const mouseY = evt.y;
+    const mouseX = evt.x;
+    hoverMouseX = mouseX;
+    hoverMouseY = mouseY;
+    const area = chart.chartArea;
+    if (!area || mouseX < area.left || mouseX > area.right ||
+        mouseY < area.top || mouseY > area.bottom) {
+      if (highlightIndex !== -1) {
+        highlightIndex = -1;
+        hoverDataIdx = -1;
+        applyHighlight(chart, -1);
+        args.changed = true;
+      }
+      return;
+    }
+
+    // Find nearest data index by pixel x-distance
+    const firstMeta = chart.getDatasetMeta(0);
+    let dataIdx = 0;
+    let bestXDist = Infinity;
+    for (let i = 0; i < firstMeta.data.length; i++) {
+      const dx = Math.abs(firstMeta.data[i].x - mouseX);
+      if (dx < bestXDist) {
+        bestXDist = dx;
+        dataIdx = i;
+      }
+    }
+
+    // Find nearest dataset by y-distance at this x index
+    let nearest = -1;
+    let nearestDist = Infinity;
+    const datasets = chart.data.datasets;
+    for (let i = 0; i < datasets.length; i++) {
+      const val = datasets[i].data[dataIdx];
+      if (val == null) continue;
+      const yPixel = chart.scales.y.getPixelForValue(val);
+      const dist = Math.abs(yPixel - mouseY);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = i;
+      }
+    }
+
+    const changed = nearest !== highlightIndex || dataIdx !== hoverDataIdx;
+    hoverDataIdx = dataIdx;
+    if (changed) {
+      highlightIndex = nearest;
+      applyHighlight(chart, nearest);
+      args.changed = true;
+    }
+  },
+
+  afterDraw(chart) {
+    const idx = highlightIndex;
+    if (idx === -1 || hoverDataIdx === -1) return;
+    const meta = chart.getDatasetMeta(idx);
+    if (!meta.visible) return;
+    const ds = chart.data.datasets[idx];
+    const area = chart.chartArea;
+    const ctx = chart.ctx;
+
+    // Info box near the hovered data point
+    const val = ds.data[hoverDataIdx];
+    if (val == null) return;
+    const pt = meta.data[hoverDataIdx];
+    if (!pt) return;
+
+    const k = hoverDataIdx + 1;
+    const displayVal = val.toFixed(1);
+    const seasonTag = ds.label.replace('Winter ', '');
+    const line1 = `${seasonTag}  ${k}d  ${displayVal}${unitLabel()}`;
+
+    // Date range of the best k-day window
+    let line2 = '';
+    if (ds._starts && ds._seasonStart && ds._starts[hoverDataIdx] != null) {
+      const s0 = new Date(ds._seasonStart);
+      const startDay = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() + ds._starts[hoverDataIdx]);
+      const endDay = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + k - 1);
+      const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      line2 = `${fmt(startDay)}\u2013${fmt(endDay)}`;
+    }
+    // Flag all-time low on the current season
+    const isLow = ds._allTimeLow && ds._allTimeLow[hoverDataIdx];
+    if (isLow) {
+      const recLabel = `\u2605 ${numSeasons}y record`;
+      line2 = line2 ? `${line2}  ${recLabel}` : recLabel;
+    }
+
+    const dark = isDark();
+    ctx.save();
+    const fontMain = '11px system-ui, sans-serif';
+    const fontSub = '10px system-ui, sans-serif';
+    ctx.font = fontMain;
+    const tw1 = ctx.measureText(line1).width;
+    ctx.font = fontSub;
+    const tw2 = line2 ? ctx.measureText(line2).width : 0;
+    const pad = 5;
+    const boxW = Math.max(tw1, tw2) + pad * 2;
+    const lineH = 14;
+    const boxH = line2 ? lineH * 2 + 4 : lineH + 6;
+    // Position above the point, shift left if near right edge
+    let bx = pt.x - boxW / 2;
+    let by = pt.y - boxH - 8;
+    if (bx < area.left) bx = area.left;
+    if (bx + boxW > area.right) bx = area.right - boxW;
+    if (by < area.top) by = pt.y + 8; // flip below if at top
+
+    ctx.fillStyle = dark ? 'rgba(22,33,62,0.92)' : 'rgba(255,255,255,0.92)';
+    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, boxW, boxH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const cx = bx + boxW / 2;
+    if (line2) {
+      ctx.font = fontMain;
+      ctx.fillStyle = dark ? '#eee' : '#333';
+      ctx.fillText(line1, cx, by + lineH / 2 + 2);
+      ctx.font = fontSub;
+      ctx.fillStyle = dark ? '#aaa' : '#777';
+      ctx.fillText(line2, cx, by + lineH + lineH / 2 + 2);
+    } else {
+      ctx.font = fontMain;
+      ctx.fillStyle = dark ? '#eee' : '#333';
+      ctx.fillText(line1, cx, by + boxH / 2);
+    }
+    ctx.restore();
+
+    // Small dot on the data point
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = ds._baseColor || '#ffffff';
+    ctx.fill();
+    ctx.restore();
+  },
+};
+
+function applyHighlight(chart, hoveredIdx) {
+  const datasets = chart.data.datasets;
+  const currentIdx = datasets.length - 1;
+  const t = theme();
+  const is50 = numSeasons === 50;
+  const dark = isDark();
+  const restAlpha = is50 ? (dark ? '45' : '30') : t.fadeAlpha;
+  const restWidth = is50 ? 0.8 : 1.3;
+
+  for (let i = 0; i < datasets.length; i++) {
+    const ds = datasets[i];
+    const isCurrent = i === currentIdx;
+    const isHovered = i === hoveredIdx;
+    if (isCurrent) ds._baseColor = t.currentLine;
+
+    if (hoveredIdx === -1) {
+      ds.borderColor = isCurrent ? t.currentLine : ds._baseColor + restAlpha;
+      ds.borderWidth = isCurrent ? 3.5 : restWidth;
+    } else {
+      if (isHovered) {
+        ds.borderColor = ds._baseColor;
+        ds.borderWidth = 3;
+      } else {
+        ds.borderColor = ds._baseColor + (is50 ? (dark ? '28' : '18') : t.dimAlpha);
+        ds.borderWidth = is50 ? 0.6 : 1.1;
+      }
+    }
+  }
+  chart.update('none');
+}
+
+// ---- Chart rendering ----
+
+function renderChart(allResults, locationName) {
+  const ctx = document.getElementById('thermochron-chart');
+  const t = theme();
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  highlightIndex = -1;
+
+  // Store for re-render on theme change
+  lastResults = allResults;
+  lastLocationName = locationName;
+
+  const labels = Array.from({ length: CONFIG.MAX_K }, (_, i) => i + 1);
+
+  const fz = freezingTemp();
+
+  const is50 = numSeasons === 50;
+  const dark = isDark();
+  const spaghettiColor = dark ? '#888888' : '#999999';
+
+  // Compute all-time lows: for each k, is the current season the min?
+  const currentResult = allResults[allResults.length - 1];
+  const allTimeLow = new Array(CONFIG.MAX_K).fill(false);
+  for (let ki = 0; ki < CONFIG.MAX_K; ki++) {
+    const curVal = currentResult.v[ki];
+    if (curVal == null) continue;
+    let isMin = true;
+    for (let s = 0; s < allResults.length - 1; s++) {
+      const other = allResults[s].v[ki];
+      if (other != null && other <= curVal) { isMin = false; break; }
+    }
+    allTimeLow[ki] = isMin;
+  }
+
+  const datasets = allResults.map((r, idx) => {
+    const isCurrent = idx === allResults.length - 1;
+    const baseColor = isCurrent ? t.currentLine
+      : is50 ? spaghettiColor : COLORS[idx % COLORS.length];
+    const displayData = r.v.slice(0, CONFIG.MAX_K).map(toDisplay);
+    const ds = {
+      label: r.season.label,
+      data: displayData,
+      _rawData: r.v.slice(0, CONFIG.MAX_K),
+      _starts: r.starts ? r.starts.slice(0, CONFIG.MAX_K) : null,
+      _seasonStart: r.season.start,
+      _baseColor: baseColor,
+      borderColor: isCurrent ? t.currentLine
+        : is50 ? spaghettiColor + (dark ? '45' : '30') : baseColor + t.fadeAlpha,
+      borderWidth: isCurrent ? 3.5 : (is50 ? 0.8 : 1.3),
+      backgroundColor: 'transparent',
+      pointRadius: 0,
+      pointHitRadius: 8,
+      tension: 0,
+      order: isCurrent ? 0 : 1,
+    };
+    if (isCurrent) {
+      ds._allTimeLow = allTimeLow;
+    }
+    return ds;
+  });
+
+  document.getElementById('location-name').textContent = `Cryofront \u2014 ${locationName}`;
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    plugins: [highlightPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: window.innerWidth < 600 ? 4 / 3 : 5 / 3,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      scales: {
+        x: {
+          title: { display: true, text: 'k (streak length in days)', color: t.axisTitle, font: { size: 12 } },
+          ticks: {
+            color: t.axisText,
+            stepSize: 7,
+            callback: (val) => val + 1,
+          },
+          afterBuildTicks(scale) {
+            scale.ticks = [];
+            for (let v = 7; v <= CONFIG.MAX_K; v += 7) {
+              scale.ticks.push({ value: v - 1 });  // 0-based index into labels
+            }
+          },
+          grid: { color: t.grid },
+          min: 1,
+          max: CONFIG.MAX_K,
+        },
+        y: {
+          title: { display: true, text: `Temperature (${unitLabel()})`, color: t.axisTitle, font: { size: 12 } },
+          ticks: { color: t.axisText },
+          grid: { color: t.grid },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            freezing: {
+              type: 'line',
+              yMin: fz, yMax: fz,
+              borderColor: t.freezeLine,
+              borderWidth: 1,
+              borderDash: [6, 4],
+              label: {
+                display: true,
+                content: `${fz}${unitLabel()}`,
+                position: 'start',
+                color: t.freezeLabel,
+                font: { size: 11 },
+                backgroundColor: 'transparent',
+              },
+            },
+          },
+        },
+        tooltip: {
+          enabled: false,
+        },
+      },
+    },
+  });
+
+  // Populate static legend (10y only)
+  const legendEl = document.getElementById('chart-legend');
+  legendEl.innerHTML = '';
+  if (!is50) {
+    datasets.forEach((ds, i) => {
+      const isCurrent = i === datasets.length - 1;
+      const span = document.createElement('span');
+      span.className = 'leg-item' + (isCurrent ? ' current' : '');
+      const tag = ds.label.replace('Winter ', '');
+      span.innerHTML = `<span class="leg-swatch" style="background:${ds._baseColor}"></span>${tag}`;
+      legendEl.appendChild(span);
+    });
+  }
+}
+
+// =========================================================================
+// Main
+// =========================================================================
+
+async function fetchSeasonResults(location, count) {
+  const seasons = makeWinterSeasons(count);
+  let done = 0;
+
+  const promises = seasons.map(async (season) => {
+    const temps = await fetchDailyHighs(location, season.start, season.end);
+    done++;
+    showStatus(`${location.name} \u2014 fetching weather data\u2026 (${done}/${seasons.length})`);
+    const tc = computeThermochron(temps);
+    return { season, k: tc.k, v: tc.v, starts: tc.starts };
+  });
+
+  const settled = await Promise.allSettled(promises);
+  const results = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+  if (results.length === 0) throw new Error('Could not retrieve weather data for any season.');
+  return results;
+}
+
+document.getElementById('zip-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  closeSuggestions();
+  const query = document.getElementById('loc-input').value.trim();
+
+  if (!query) {
+    showError('Enter a US ZIP code or city name.');
+    return;
+  }
+
+  const goBtn = document.getElementById('go-btn');
+  goBtn.disabled = true;
+  hideChart();
+  showStatus('Looking up location\u2026');
+
+  try {
+    let location;
+    if (selectedLoc) {
+      location = selectedLoc;
+      selectedLoc = null;
+    } else {
+      location = await geocodeQuery(query);
+    }
+    showStatus(`${location.name} \u2014 fetching weather data\u2026`);
+
+    const results = await fetchSeasonResults(location, numSeasons);
+
+    // Cache results
+    cachedLocation = location;
+    if (numSeasons === 10) cachedResults10 = results;
+    else cachedResults50 = results;
+
+    clearStatus();
+    showChart();
+    renderChart(results, location.name);
+
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+
+// Pre-fill with default ZIP
+document.getElementById('loc-input').value = '06515';
+
+// =========================================================================
+// Autocomplete
+// =========================================================================
+
+const locInput = document.getElementById('loc-input');
+const sugList = document.getElementById('loc-suggestions');
+let acTimer = null;
+let acIdx = -1; // keyboard nav index
+
+function closeSuggestions() {
+  sugList.style.display = 'none';
+  sugList.innerHTML = '';
+  acIdx = -1;
+}
+
+function showSuggestions(items) {
+  if (items.length === 0) { closeSuggestions(); return; }
+  sugList.innerHTML = '';
+  acIdx = -1;
+  items.forEach((item, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `${item.name}<span class="loc-sub">${item.admin1}</span>`;
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // don't blur input
+      selectedLoc = { name: `${item.name}, ${item.admin1}`, lat: item.lat, lon: item.lon };
+      locInput.value = `${item.name}, ${item.admin1}`;
+      closeSuggestions();
+      document.getElementById('zip-form').requestSubmit();
+    });
+    sugList.appendChild(li);
+  });
+  sugList.style.display = 'block';
+}
+
+locInput.addEventListener('input', () => {
+  selectedLoc = null;
+  clearTimeout(acTimer);
+  const q = locInput.value.trim();
+  // Only autocomplete for non-ZIP text >= 2 chars
+  if (isZip(q) || q.length < 2) { closeSuggestions(); return; }
+  acTimer = setTimeout(async () => {
+    const results = await geocodeSearch(q);
+    // Only show if input hasn't changed
+    if (locInput.value.trim() === q) showSuggestions(results);
+  }, 250);
+});
+
+locInput.addEventListener('keydown', (e) => {
+  const items = sugList.querySelectorAll('li');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIdx = Math.min(acIdx + 1, items.length - 1);
+    items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIdx = Math.max(acIdx - 1, 0);
+    items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+  } else if (e.key === 'Enter' && acIdx >= 0) {
+    e.preventDefault();
+    items[acIdx].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+
+locInput.addEventListener('blur', () => {
+  // Small delay to allow mousedown on suggestion to fire first
+  setTimeout(closeSuggestions, 150);
+});
+
+// =========================================================================
+// Slide toggle helper
+// =========================================================================
+
+function updateSlider(toggle) {
+  const opts = toggle.querySelectorAll('.opt');
+  const slider = toggle.querySelector('.slider');
+  const activeOpt = toggle.querySelector('.opt.active');
+  if (!activeOpt) return;
+  slider.style.left = activeOpt.offsetLeft + 'px';
+  slider.style.width = activeOpt.offsetWidth + 'px';
+}
+
+// =========================================================================
+// Theme toggle
+// =========================================================================
+
+const themeToggle = document.getElementById('theme-toggle');
+
+function applyThemeState() {
+  const val = isDark() ? 'dark' : 'light';
+  themeToggle.querySelectorAll('.opt').forEach(o => {
+    o.classList.toggle('active', o.dataset.val === val);
+  });
+  updateSlider(themeToggle);
+}
+
+// Default to light; restore saved preference if dark
+if (localStorage.getItem('tc_theme') === 'dark') {
+  document.documentElement.classList.remove('light');
+} else {
+  document.documentElement.classList.add('light');
+}
+applyThemeState();
+
+themeToggle.addEventListener('click', () => {
+  document.documentElement.classList.toggle('light');
+  const mode = isDark() ? 'dark' : 'light';
+  localStorage.setItem('tc_theme', mode);
+  applyThemeState();
+  if (lastResults) {
+    renderChart(lastResults, lastLocationName);
+  }
+});
+
+// =========================================================================
+// Unit toggle (°F / °C)
+// =========================================================================
+
+const unitToggle = document.getElementById('unit-toggle');
+
+function applyUnitState() {
+  const val = useCelsius ? 'C' : 'F';
+  unitToggle.querySelectorAll('.opt').forEach(o => {
+    o.classList.toggle('active', o.dataset.val === val);
+  });
+  updateSlider(unitToggle);
+}
+
+// Restore saved preference
+if (localStorage.getItem('tc_unit') === 'C') {
+  useCelsius = true;
+}
+applyUnitState();
+
+unitToggle.addEventListener('click', () => {
+  useCelsius = !useCelsius;
+  localStorage.setItem('tc_unit', useCelsius ? 'C' : 'F');
+  applyUnitState();
+  if (lastResults) {
+    renderChart(lastResults, lastLocationName);
+  }
+});
+
+// ── Range toggle (10y / 50y) ──────────────────────────────────────────
+const rangeToggle = document.getElementById('range-toggle');
+
+function applyRangeState() {
+  const val = String(numSeasons);
+  rangeToggle.querySelectorAll('.opt').forEach(o => {
+    o.classList.toggle('active', o.dataset.val === val);
+  });
+  updateSlider(rangeToggle);
+}
+
+// Restore saved preference
+if (localStorage.getItem('tc_range') === '50') {
+  numSeasons = 50;
+}
+applyRangeState();
+
+rangeToggle.addEventListener('click', async () => {
+  numSeasons = numSeasons === 10 ? 50 : 10;
+  localStorage.setItem('tc_range', String(numSeasons));
+  applyRangeState();
+
+  // No location loaded yet — nothing to re-render
+  if (!cachedLocation) return;
+
+  // Check cache first
+  const cached = numSeasons === 10 ? cachedResults10 : cachedResults50;
+  if (cached) {
+    lastResults = cached;
+    lastLocationName = cachedLocation.name;
+    renderChart(cached, cachedLocation.name);
+    return;
+  }
+
+  // Need to fetch data for this range
+  const goBtn = document.getElementById('go-btn');
+  goBtn.disabled = true;
+  hideChart();
+  showStatus(`${cachedLocation.name} \u2014 fetching weather data\u2026`);
+
+  try {
+    const results = await fetchSeasonResults(cachedLocation, numSeasons);
+    if (numSeasons === 10) cachedResults10 = results;
+    else cachedResults50 = results;
+    lastResults = results;
+    lastLocationName = cachedLocation.name;
+    clearStatus();
+    showChart();
+    renderChart(results, cachedLocation.name);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+
+// ── PNG export ────────────────────────────────────────────────────────
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!chartInstance) return;
+
+  const src = chartInstance.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const srcW = src.width;   // already in device pixels
+  const srcH = src.height;
+
+  const titleH = Math.round(36 * dpr);
+  const footerH = Math.round(28 * dpr);
+  const padX = Math.round(12 * dpr);
+  const totalW = srcW + padX * 2;
+  const totalH = srcH + titleH + footerH;
+
+  const c = document.createElement('canvas');
+  c.width = totalW;
+  c.height = totalH;
+  const ctx = c.getContext('2d');
+
+  // Background
+  const dark = isDark();
+  ctx.fillStyle = dark ? '#16213e' : '#ffffff';
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // Title
+  const titleSize = Math.round(15 * dpr);
+  ctx.font = `400 ${titleSize}px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = dark ? '#e8e8e8' : '#222';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Cryofront \u2014 ${lastLocationName}`, totalW / 2, titleH / 2);
+
+  // Chart
+  ctx.drawImage(src, padX, titleH);
+
+  // Footer
+  const footSize = Math.round(9 * dpr);
+  ctx.font = `${footSize}px system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = dark ? '#666' : '#999';
+  ctx.fillText('Made by Cryofront, cooked with Claude by Johan Ugander.', totalW / 2, titleH + srcH + footerH / 2);
+
+  // Download
+  const link = document.createElement('a');
+  const slug = lastLocationName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().replace(/-+$/, '');
+  link.download = `cryofront-${slug}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+});
+</script>
+</body>
+</html>
