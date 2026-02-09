@@ -170,6 +170,30 @@ header .subtitle {
   color: var(--input-placeholder);
 }
 
+#zip-form label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+#lastk-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+#lastk-label input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 #loc-suggestions {
   display: none;
   position: absolute;
@@ -337,6 +361,12 @@ header .subtitle {
 
 #explanation strong { color: var(--text-card-strong); }
 
+#data-time {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* --- Footer --- */
 
 footer {
@@ -353,15 +383,108 @@ footer a {
 
 footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
 
+/* --- Details lightbox --- */
+
+#details-link {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 0.3rem;
+}
+#details-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+#details-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#details-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#details-card {
+  position: relative;
+  max-width: 600px;
+  width: calc(100% - 2rem);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  background: var(--bg-card);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  line-height: 1.65;
+  font-size: 0.88rem;
+}
+
+#details-card h3 {
+  color: var(--text-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+#details-card h4 {
+  color: var(--text-card-strong);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-top: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+#details-card p {
+  margin-bottom: 0.7rem;
+  color: var(--text-card);
+}
+
+#details-card strong { color: var(--text-card-strong); }
+
+#details-card code {
+  font-size: 0.82rem;
+  background: var(--bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+#details-card a { color: var(--accent); text-decoration: none; }
+#details-card a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+#details-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+#details-close:hover { color: var(--text); background: rgba(128,128,128,0.15); }
+
 /* --- Responsive --- */
 
 @media (max-width: 600px) {
   #app { padding: 1rem 0.75rem; }
   header h1 { font-size: 1.6rem; }
-  #loc-input { width: 180px; }
+  #zip-form {
+    flex-wrap: wrap;
+  }
+  #zip-form label { font-size: 0.75rem; }
+  #loc-input { width: 160px; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
   #chart-container { padding: 1rem 0.5rem 0.5rem; border-radius: 8px; }
   #location-name { font-size: 1.1rem; }
   #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
+  #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
+  #explanation { font-size: 0.8rem; padding: 0.75rem; }
 }
 </style>
 </head>
@@ -381,6 +504,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   </header>
 
   <form id="zip-form">
+    <label for="loc-input">City/ZIP:</label>
     <div id="loc-wrap">
       <input type="text" id="loc-input" placeholder="ZIP code or city name" autocomplete="off" spellcheck="false">
       <ul id="loc-suggestions"></ul>
@@ -396,6 +520,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       <span class="opt" data-val="10">10 year</span>
       <span class="opt" data-val="50">50 year</span>
     </div>
+    <label id="lastk-label"><input type="checkbox" id="lastk-toggle"> Last <em>k</em> days</label>
   </form>
 
   <div id="status-area"></div>
@@ -409,7 +534,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     <button id="export-btn" title="Save as PNG">Save PNG</button>
   </div>
 
-  <div id="explanation" style="display:none;">
+  <div id="explanation">
     <strong>What is a cryofront?</strong> A <em>minimax curve</em> for winter cold:
     for each streak length <em>k</em>, find the coldest <em>k</em>-day window in the season
     and report its peak daily high. This is a
@@ -417,7 +542,78 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     allowing a higher ceiling temperature during that season.
     Where a curve crosses <strong>32&deg;F</strong>,
     that&rsquo;s how many consecutive days the temperature never rose above freezing.
-    The bold line is the current season (Oct&ndash;Mar).
+    The bold line is the current season (Oct&ndash;Sep).
+    The dashed line (toggle &ldquo;Last <em>k</em> days&rdquo;) shows the
+    peak high over the most recent <em>k</em> days&mdash;a snapshot of right now.
+    <span id="data-time"></span>
+    <a href="#" id="details-link">More details&hellip;</a>
+  </div>
+
+  <div id="details-modal" style="display:none;">
+    <div id="details-backdrop"></div>
+    <div id="details-card">
+      <button id="details-close" aria-label="Close">&times;</button>
+      <h3>How the Cryofront Works</h3>
+      <p>
+        Pick a number of days&mdash;say 7. Now look at every 7-day stretch during
+        the winter and ask: what was the highest temperature during that stretch?
+        The cryofront finds the 7-day stretch where that high was as
+        <strong>low as possible</strong>. That&rsquo;s the coldest week of winter,
+        measured by how warm it got at its warmest.
+      </p>
+      <p>
+        Repeat for every streak length from 1 to 42 days and you get a curve.
+        At <em>k</em>&nbsp;=&nbsp;1, the cryofront is simply the lowest single-day
+        high of the season&mdash;the day whose high temperature was the coldest.
+        As <em>k</em> grows, longer streaks inevitably include a warmer day, so
+        the curve rises. This tradeoff is a
+        <em>Pareto frontier</em>&mdash;you can&rsquo;t find a longer cold streak
+        without allowing a higher peak temperature.
+      </p>
+      <p>
+        Where a curve crosses <strong>32&deg;F</strong>, it means the daily high
+        never rose above freezing for that many consecutive days.
+      </p>
+      <h4>Reading the chart</h4>
+      <p>
+        Each line is one season. The <strong>bold line</strong> is the current
+        season (updated as winter progresses). The x-axis is the streak length
+        in days; the y-axis is the peak daily high during that streak.
+        Hover over any point to see the exact dates of the cold streak.
+      </p>
+      <p>
+        The optional <strong>&ldquo;Last <em>k</em> days&rdquo;</strong> overlay
+        (dashed line) shows the maximum daily high over the most recent
+        <em>k</em> days, ending today. Today&rsquo;s value is the high
+        temperature <em>so far</em> today&mdash;it may rise as the day
+        progresses, which is worth keeping in mind on a warm afternoon.
+        The &ldquo;last <em>k</em>&rdquo; line is always at or above the current
+        season&rsquo;s cryofront, since the cryofront picks the
+        <em>best</em> window while &ldquo;last <em>k</em>&rdquo; is one specific
+        trailing window.
+      </p>
+      <h4>Daily highs only</h4>
+      <p>
+        All computations use <strong>daily high temperatures</strong>&mdash;one
+        value per day, representing the warmest temperature recorded that day.
+        The tool does not consider hourly data or intraday windows. A finer-grained
+        analysis using hourly temperatures could identify colder sub-day stretches,
+        but the daily-high framing gives a natural, calendar-aligned view of
+        sustained cold.
+      </p>
+      <h4>Seasons &amp; data</h4>
+      <p>
+        A season runs from October&nbsp;1 through September&nbsp;30.
+        The current season&rsquo;s curve updates throughout the year as new days
+        are added. When two equally cold streaks exist, the most recent one is
+        shown&mdash;so an ongoing cold snap always appears.
+      </p>
+      <p>
+        Weather data (daily high temperatures) comes from the
+        <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        historical archive.
+      </p>
+    </div>
   </div>
 
   <footer>
@@ -451,6 +647,8 @@ let numSeasons = 10;
 let cachedResults10 = null;
 let cachedResults50 = null;
 let cachedLocation = null;
+let showLastK = false;
+let lastKData = null;  // raw Fahrenheit values for "last k days" line
 
 function toDisplay(f) { return useCelsius ? (f - 32) * 5 / 9 : f; }
 function unitLabel() { return useCelsius ? '\u00b0C' : '\u00b0F'; }
@@ -569,7 +767,7 @@ function makeWinterSeasons(count, ref) {
   const seasons = [];
   for (let y = currentYear - count + 1; y <= currentYear; y++) {
     const start = new Date(y, 9, 1);          // Oct 1
-    const nomEnd = new Date(y + 1, 2, 31);    // Mar 31
+    const nomEnd = new Date(y + 1, 8, 30);    // Sep 30
     const end = nomEnd < ref ? nomEnd : ref;
     const label = `Winter ${y}-${String((y + 1) % 100).padStart(2, '0')}`;
     seasons.push({ label, start, end, year: y });
@@ -648,14 +846,27 @@ function computeThermochron(dailyHighs) {
   return { k: kValues, v: thermoValues, starts: startIndices };
 }
 
+// Trailing-window max: for each k, max of the last k values in the array
+function computeLastK(dailyHighs) {
+  const n = dailyHighs.length;
+  const maxK = Math.min(CONFIG.MAX_K, n);
+  const values = [];
+  for (let k = 1; k <= maxK; k++) {
+    let mx = -Infinity;
+    for (let j = n - k; j < n; j++) {
+      if (dailyHighs[j] > mx) mx = dailyHighs[j];
+    }
+    values.push(mx);
+  }
+  return values;
+}
+
 // =========================================================================
 // UI helpers
 // =========================================================================
 
 const statusEl = document.getElementById('status-area');
 const chartContainer = document.getElementById('chart-container');
-const explanationEl = document.getElementById('explanation');
-
 function showStatus(msg) {
   statusEl.className = 'loading';
   statusEl.innerHTML = '<span class="spinner"></span>' + msg;
@@ -671,8 +882,8 @@ function clearStatus() {
   statusEl.innerHTML = '';
 }
 
-function showChart() { chartContainer.style.display = ''; explanationEl.style.display = ''; }
-function hideChart() { chartContainer.style.display = 'none'; explanationEl.style.display = 'none'; }
+function showChart() { chartContainer.style.display = ''; }
+function hideChart() { chartContainer.style.display = 'none'; }
 
 // =========================================================================
 // Chart rendering
@@ -775,23 +986,33 @@ const highlightPlugin = {
 
     const k = hoverDataIdx + 1;
     const displayVal = val.toFixed(1);
-    const seasonTag = ds.label.replace('Winter ', '');
-    const line1 = `${seasonTag}  ${k}d  ${displayVal}${unitLabel()}`;
+    let line1, line2 = '';
 
-    // Date range of the best k-day window
-    let line2 = '';
-    if (ds._starts && ds._seasonStart && ds._starts[hoverDataIdx] != null) {
-      const s0 = new Date(ds._seasonStart);
-      const startDay = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() + ds._starts[hoverDataIdx]);
-      const endDay = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + k - 1);
+    if (ds._isLastK) {
+      line1 = `Last ${k}d  ${displayVal}${unitLabel()}`;
       const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endDay = new Date();
+      const startDay = new Date();
+      startDay.setDate(startDay.getDate() - k + 1);
       line2 = `${fmt(startDay)}\u2013${fmt(endDay)}`;
-    }
-    // Flag all-time low on the current season
-    const isLow = ds._allTimeLow && ds._allTimeLow[hoverDataIdx];
-    if (isLow) {
-      const recLabel = `\u2605 ${numSeasons}y record`;
-      line2 = line2 ? `${line2}  ${recLabel}` : recLabel;
+    } else {
+      const seasonTag = ds.label.replace('Winter ', '');
+      line1 = `${seasonTag}  ${k}d  ${displayVal}${unitLabel()}`;
+
+      // Date range of the best k-day window
+      if (ds._starts && ds._seasonStart && ds._starts[hoverDataIdx] != null) {
+        const s0 = new Date(ds._seasonStart);
+        const startDay = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() + ds._starts[hoverDataIdx]);
+        const endDay = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + k - 1);
+        const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        line2 = `${fmt(startDay)}\u2013${fmt(endDay)}`;
+      }
+      // Flag all-time low on the current season
+      const isLow = ds._allTimeLow && ds._allTimeLow[hoverDataIdx];
+      if (isLow) {
+        const recLabel = `\u2605 ${numSeasons}y record`;
+        line2 = line2 ? `${line2}  ${recLabel}` : recLabel;
+      }
     }
 
     const dark = isDark();
@@ -850,7 +1071,6 @@ const highlightPlugin = {
 
 function applyHighlight(chart, hoveredIdx) {
   const datasets = chart.data.datasets;
-  const currentIdx = datasets.length - 1;
   const t = theme();
   const is50 = numSeasons === 50;
   const dark = isDark();
@@ -859,20 +1079,30 @@ function applyHighlight(chart, hoveredIdx) {
 
   for (let i = 0; i < datasets.length; i++) {
     const ds = datasets[i];
-    const isCurrent = i === currentIdx;
+    const isCurrent = !!ds._isCurrent;
+    const isLastK = !!ds._isLastK;
     const isHovered = i === hoveredIdx;
     if (isCurrent) ds._baseColor = t.currentLine;
 
     if (hoveredIdx === -1) {
-      ds.borderColor = isCurrent ? t.currentLine : ds._baseColor + restAlpha;
-      ds.borderWidth = isCurrent ? 3.5 : restWidth;
+      // No hover — default styling
+      if (isCurrent) {
+        ds.borderColor = t.currentLine;
+        ds.borderWidth = 3.5;
+      } else if (isLastK) {
+        ds.borderColor = ds._baseColor;
+        ds.borderWidth = 2.5;
+      } else {
+        ds.borderColor = ds._baseColor + restAlpha;
+        ds.borderWidth = restWidth;
+      }
     } else {
       if (isHovered) {
         ds.borderColor = ds._baseColor;
         ds.borderWidth = 3;
       } else {
         ds.borderColor = ds._baseColor + (is50 ? (dark ? '28' : '18') : t.dimAlpha);
-        ds.borderWidth = is50 ? 0.6 : 1.1;
+        ds.borderWidth = isLastK ? 1.5 : (is50 ? 0.6 : 1.1);
       }
     }
   }
@@ -936,10 +1166,32 @@ function renderChart(allResults, locationName) {
       order: isCurrent ? 0 : 1,
     };
     if (isCurrent) {
+      ds._isCurrent = true;
       ds._allTimeLow = allTimeLow;
     }
     return ds;
   });
+
+  // "Last k days" overlay dataset
+  if (showLastK && lastKData) {
+    const lkColor = dark ? '#ff9f43' : '#d35400';
+    const displayLK = lastKData.slice(0, CONFIG.MAX_K).map(toDisplay);
+    datasets.push({
+      label: 'Last k days',
+      data: displayLK,
+      _rawData: lastKData.slice(0, CONFIG.MAX_K),
+      _baseColor: lkColor,
+      _isLastK: true,
+      borderColor: lkColor,
+      borderWidth: 2.5,
+      borderDash: [6, 3],
+      backgroundColor: 'transparent',
+      pointRadius: 0,
+      pointHitRadius: 8,
+      tension: 0,
+      order: 0,
+    });
+  }
 
   document.getElementById('location-name').textContent = `Cryofront \u2014 ${locationName}`;
 
@@ -1008,10 +1260,10 @@ function renderChart(allResults, locationName) {
   const legendEl = document.getElementById('chart-legend');
   legendEl.innerHTML = '';
   if (!is50) {
-    datasets.forEach((ds, i) => {
-      const isCurrent = i === datasets.length - 1;
+    datasets.forEach((ds) => {
+      if (ds._isLastK) return; // last-k line not in legend
       const span = document.createElement('span');
-      span.className = 'leg-item' + (isCurrent ? ' current' : '');
+      span.className = 'leg-item' + (ds._isCurrent ? ' current' : '');
       const tag = ds.label.replace('Winter ', '');
       span.innerHTML = `<span class="leg-swatch" style="background:${ds._baseColor}"></span>${tag}`;
       legendEl.appendChild(span);
@@ -1068,10 +1320,23 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
 
     const results = await fetchSeasonResults(location, numSeasons);
 
+    // Fetch last-k-days data (last 42 days, regardless of season)
+    const lkEnd = new Date();
+    const lkStart = new Date();
+    lkStart.setDate(lkStart.getDate() - (CONFIG.MAX_K - 1));
+    const lkTemps = await fetchDailyHighs(location, lkStart, lkEnd);
+    lastKData = computeLastK(lkTemps);
+
     // Cache results
     cachedLocation = location;
     if (numSeasons === 10) cachedResults10 = results;
     else cachedResults50 = results;
+
+    // Show data freshness timestamp in user's local timezone
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    document.getElementById('data-time').textContent =
+      `Data through ${timeStr} today.`;
 
     clearStatus();
     showChart();
@@ -1288,6 +1553,14 @@ rangeToggle.addEventListener('click', async () => {
   }
 });
 
+// ── "Last k days" checkbox ────────────────────────────────────────────
+document.getElementById('lastk-toggle').addEventListener('change', (e) => {
+  showLastK = e.target.checked;
+  if (lastResults) {
+    renderChart(lastResults, lastLocationName);
+  }
+});
+
 // ── PNG export ────────────────────────────────────────────────────────
 document.getElementById('export-btn').addEventListener('click', () => {
   if (!chartInstance) return;
@@ -1339,11 +1612,11 @@ document.getElementById('export-btn').addEventListener('click', () => {
     // Measure total width
     ctx.font = `${legFontSize}px system-ui, -apple-system, sans-serif`;
     let totalLegW = 0;
-    const items = ds.map((d, i) => {
+    const items = ds.filter(d => !d._isLastK).map((d) => {
       const tag = d.label.replace('Winter ', '');
       const tw = ctx.measureText(tag).width;
       totalLegW += swatchW + gap + tw;
-      return { tag, tw, color: d._baseColor, isCurrent: i === ds.length - 1 };
+      return { tag, tw, color: d._baseColor, isCurrent: !!d._isCurrent };
     });
     totalLegW += itemGap * (items.length - 1);
 
@@ -1380,6 +1653,28 @@ document.getElementById('export-btn').addEventListener('click', () => {
   link.download = `cryofront-${numSeasons}y-${slug}.png`;
   link.href = c.toDataURL('image/png');
   link.click();
+});
+
+// ── Details modal ─────────────────────────────────────────────────────
+const detailsModal = document.getElementById('details-modal');
+
+document.getElementById('details-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  detailsModal.style.display = '';
+});
+
+document.getElementById('details-backdrop').addEventListener('click', () => {
+  detailsModal.style.display = 'none';
+});
+
+document.getElementById('details-close').addEventListener('click', () => {
+  detailsModal.style.display = 'none';
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && detailsModal.style.display !== 'none') {
+    detailsModal.style.display = 'none';
+  }
 });
 </script>
 </body>
