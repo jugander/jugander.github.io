@@ -370,6 +370,16 @@ header .subtitle {
   height: 5px;
 }
 
+/* When pins are active, dim unpinned items — including .current */
+#chart-legend.has-pins .leg-item:not(.pinned) {
+  opacity: 0.35;
+  font-weight: 400;
+}
+
+#chart-legend.has-pins .leg-item:not(.pinned) .leg-swatch {
+  height: 3px;
+}
+
 #chart-legend.grid-mode {
   display: flex;
   flex-wrap: wrap;
@@ -421,6 +431,16 @@ header .subtitle {
 #chart-legend.grid-mode .leg-cell.current .leg-dot {
   outline: 1.5px solid var(--accent);
   outline-offset: 0.5px;
+}
+
+/* When pins are active, dim unpinned cells — including .current */
+#chart-legend.grid-mode.has-pins .leg-cell:not(.pinned) {
+  opacity: 0.35;
+  font-weight: 400;
+}
+
+#chart-legend.grid-mode.has-pins .leg-cell:not(.pinned) .leg-dot {
+  outline: none;
 }
 
 #export-btn {
@@ -1401,6 +1421,8 @@ function renderChart(allResults, locationName) {
       pinnedSets.add(dsIndex);
       el.classList.add('pinned');
     }
+    // Toggle has-pins class on legend container
+    legendEl.classList.toggle('has-pins', pinnedSets.size > 0);
     highlightIndex = -1;
     hoverDataIdx = -1;
     applyHighlight(chartInstance, -1);
@@ -1453,6 +1475,7 @@ function renderChart(allResults, locationName) {
     if (pinnedSets.size > 0) {
       pinnedSets.clear();
       legendEl.querySelectorAll('.pinned').forEach(el => el.classList.remove('pinned'));
+      legendEl.classList.remove('has-pins');
       highlightIndex = -1;
       hoverDataIdx = -1;
       applyHighlight(chartInstance, -1);

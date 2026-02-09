@@ -577,8 +577,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       <p>
         Daily high and low temperatures come from the
         <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
-        historical archive. The current year&rsquo;s data runs through today
-        and is marked with a hollow dot, since the year is still in progress.
+        historical archive. Only fully completed years are included.
       </p>
       <h4>Reference</h4>
       <p>
@@ -592,7 +591,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   </div>
 
   <footer>
-    Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>.
+    Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>. Last updated Feb 9, 2026.
     Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>).
     Inspired by <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">Dodds et al. (2016)</a>.
@@ -836,7 +835,7 @@ function computeTeletherms(yearDataMap) {
     coldTemps.push(minIdx >= 0 ? minLow : null);
     coldDates.push(minIdx >= 0 ? yd.dates[minIdx] : null);
 
-    isPartial.push(year === END_YEAR);
+    isPartial.push(false); // all years in range are complete
   }
 
   return { years, warmDays, coldDays, warmTemps, coldTemps, warmDates, coldDates, isPartial };
@@ -1449,7 +1448,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
-    `Made by Teletherm, cooked with Claude by Johan Ugander. Data through ${END_YEAR}.`,
+    `Made by Teletherm, cooked with Claude by Johan Ugander. Data through ${END_YEAR}. Last updated Feb 9, 2026.`,
     totalW / 2, titleH + srcH + captionH + footerH / 2
   );
 
