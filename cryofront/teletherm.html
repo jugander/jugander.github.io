@@ -362,6 +362,8 @@ header .subtitle {
 }
 
 #explanation strong { color: var(--text-card-strong); }
+#explanation a { color: var(--accent); text-decoration: none; }
+#explanation a:hover { color: var(--accent-hover); text-decoration: underline; }
 
 #data-time {
   font-size: 0.78rem;
@@ -606,7 +608,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     </div>
   </div>
 
-  <div class="see-also">See also: <a href="index.html">[Cryofront]</a></div>
+  <div class="see-also">See also: <a href="index.html">[Cryofront]</a> <a href="thermofront.html">[Thermofront]</a></div>
   <footer>
     Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>. Last updated Feb 9, 2026.
     Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
@@ -738,7 +740,9 @@ async function geocodeQuery(query) {
   const cached = readCache(cacheKey);
   if (cached) return cached;
 
-  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
+  // Strip ", State" suffix — the API only matches city names, not "City, State"
+  const apiQuery = query.trim().replace(/,.*$/, '').trim();
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`);
   if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
   const data = await resp.json();
   const results = data.results || [];
@@ -760,6 +764,25 @@ async function geocodeQuery(query) {
       writeCache(cacheKey, loc);
       return loc;
     }
+  }
+  // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
+  if (zip) {
+    try {
+      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`);
+      if (zResp.ok) {
+        const zData = await zResp.json();
+        if (zData.places && zData.places.length > 0) {
+          const p = zData.places[0];
+          const loc = {
+            name: `${p['place name']}, ${p.state}`,
+            lat: parseFloat(p.latitude),
+            lon: parseFloat(p.longitude),
+          };
+          writeCache(cacheKey, loc);
+          return loc;
+        }
+      }
+    } catch (_) { /* fall through to error */ }
   }
   throw new Error(`No US location found for "${query}"`);
 }
@@ -1314,6 +1337,13 @@ document.getElementById('loc-input').value = '05401';
 
 // Set data-through year in footer
 document.getElementById('data-through').textContent = END_YEAR;
+
+// Auto-load from URL query parameter (?zip=...)
+const urlZip = new URLSearchParams(window.location.search).get('zip');
+if (urlZip) {
+  document.getElementById('loc-input').value = urlZip;
+  document.getElementById('zip-form').requestSubmit();
+}
 
 // =========================================================================
 // Autocomplete
