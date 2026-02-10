@@ -611,7 +611,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   </div>
 
   <footer>
-    Cooked with Claude by Johan Ugander. Data through <span id="data-through"></span>. Last updated Feb 10, 2026.
+    Cooked with Claude by <a href="https://jugander.github.io/" target="_blank" rel="noopener">Johan Ugander</a>. Data through <span id="data-through"></span>. Last updated Feb 10, 2026.
     Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>).
   </footer>
@@ -1288,7 +1288,7 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
   closeSuggestions();
   const query = document.getElementById('loc-input').value.trim();
 
-  if (!query) { showError('Enter a US ZIP code or city name.'); return; }
+  if (!query) { showError('Enter a city or US ZIP code.'); return; }
 
   const goBtn = document.getElementById('go-btn');
   goBtn.disabled = true;

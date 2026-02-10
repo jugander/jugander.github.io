@@ -839,7 +839,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   </div>
 
   <footer>
-    Last updated Feb 10, 2026. Cooked with Claude by Johan Ugander. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
+    Last updated Feb 10, 2026. Cooked with Claude by <a href="https://jugander.github.io/" target="_blank" rel="noopener">Johan Ugander</a>. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)
   </footer>
 </div>
@@ -874,6 +874,8 @@ let includeCurrent = false;
 let includeToday = false;
 let lastObservedHour = null;
 let lastKData = null;  // raw Fahrenheit values for "last k days" line
+let lastKDataNoToday = null;
+let lastFetchTime = 0;
 
 function toDisplay(f) { return useCelsius ? (f - 32) * 5 / 9 : f; }
 function unitLabel() { return useCelsius ? '\u00b0C' : '\u00b0F'; }
@@ -1016,7 +1018,6 @@ let selectedLoc = null;
 function makeSummerSeasons(count, ref) {
   if (!ref) {
     ref = new Date();
-    if (!includeToday) ref.setDate(ref.getDate() - 1);
   }
   const currentYear = ref.getMonth() >= 9 ? ref.getFullYear() : ref.getFullYear() - 1;
   const seasons = [];
@@ -1039,7 +1040,10 @@ async function fetchTodayObservedLow(loc) {
   const lon = loc.lon.toFixed(4);
   const cacheKey = `tl_${lat}_${lon}`;
   const cached = readCache(cacheKey, 15 * 60 * 1000); // 15-min cache
-  if (cached !== null) return cached;
+  if (cached !== null && cached.hour) {
+    lastObservedHour = cached.hour;
+    return cached.value;
+  }
 
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&hourly=temperature_2m&temperature_unit=fahrenheit` +
@@ -1062,7 +1066,7 @@ async function fetchTodayObservedLow(loc) {
   }
   if (low === Infinity) return null;
   lastObservedHour = latestHour;
-  writeCache(cacheKey, low);
+  writeCache(cacheKey, { value: low, hour: latestHour });
   return low;
 }
 
@@ -1074,9 +1078,9 @@ async function fetchDailyLows(loc, startDate, endDate) {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  // If endDate is today and includeToday is on, fetch archive through yesterday
+  // If endDate is today, fetch archive through yesterday
   // then append today's observed low from the Forecast API
-  const endsToday = includeToday && isoDate(endDate) === isoDate(today);
+  const endsToday = isoDate(endDate) === isoDate(today);
   const archiveEnd = endsToday ? yesterday : endDate;
 
   const s = isoDate(startDate);
@@ -1466,10 +1470,22 @@ function renderChart(allResults, locationName) {
   const dark = isDark();
 
   // Filter out current season if not included
-  const displayResults = includeCurrent
+  let displayResults = includeCurrent
     ? allResults
     : allResults.filter((_, i) => i < allResults.length - 1);
   if (displayResults.length === 0) return;
+
+  // Swap current season to without-today version if needed
+  if (!includeToday && displayResults.length > 0) {
+    const last = displayResults[displayResults.length - 1];
+    if (last.vNoToday) {
+      displayResults = displayResults.map((r, i) =>
+        i === displayResults.length - 1
+          ? { ...r, k: r.kNoToday, v: r.vNoToday, starts: r.startsNoToday }
+          : r
+      );
+    }
+  }
 
   const histCount = displayResults.length - 1;
 
@@ -1519,13 +1535,14 @@ function renderChart(allResults, locationName) {
   });
 
   // "Last k days" overlay dataset
-  if (showLastK && lastKData) {
+  const activeLastK = includeToday ? lastKData : lastKDataNoToday;
+  if (showLastK && activeLastK) {
     const lkColor = dark ? '#ff9f43' : '#d35400';
-    const displayLK = lastKData.slice(0, CONFIG.MAX_K).map(toDisplay);
+    const displayLK = activeLastK.slice(0, CONFIG.MAX_K).map(toDisplay);
     datasets.push({
       label: 'Last k days',
       data: displayLK,
-      _rawData: lastKData.slice(0, CONFIG.MAX_K),
+      _rawData: activeLastK.slice(0, CONFIG.MAX_K),
       _baseColor: lkColor,
       _isLastK: true,
       borderColor: lkColor,
@@ -1691,11 +1708,25 @@ function updateStats(allResults, locationName) {
   const fmtShort = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const fmtWithYear = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  // Build view of results with correct today/no-today version for current season
+  const activeLastK = includeToday ? lastKData : lastKDataNoToday;
+  let viewResults = allResults;
+  if (!includeToday && allResults.length > 0) {
+    const last = allResults[allResults.length - 1];
+    if (last.vNoToday) {
+      viewResults = allResults.map((r, i) =>
+        i === allResults.length - 1
+          ? { ...r, k: r.kNoToday, v: r.vNoToday, starts: r.startsNoToday }
+          : r
+      );
+    }
+  }
+
   // 1. Current tropical night streak (from lastKData)
   let currentStreak = 0;
-  if (lastKData) {
-    for (let k = 1; k <= lastKData.length; k++) {
-      if (lastKData[k - 1] >= 68) currentStreak = k;
+  if (activeLastK) {
+    for (let k = 1; k <= activeLastK.length; k++) {
+      if (activeLastK[k - 1] >= 68) currentStreak = k;
       else break;
     }
   }
@@ -1719,13 +1750,13 @@ function updateStats(allResults, locationName) {
   }
 
   // 2. Longest streak this season
-  const current = allResults[allResults.length - 1];
+  const current = viewResults[viewResults.length - 1];
   const thisSeasonK = !includeCurrent ? 0 : longestTropicalStreak(current);
 
   // 3. Longest streak ever (across all seasons)
   const statsResults = !includeCurrent
-    ? allResults.filter((_, i) => i < allResults.length - 1)
-    : allResults;
+    ? viewResults.filter((_, i) => i < viewResults.length - 1)
+    : viewResults;
   let allTimeK = 0;
   let allTimeResult = null;
   for (const r of statsResults) {
@@ -1738,17 +1769,18 @@ function updateStats(allResults, locationName) {
 
   // Bullet 1: current streak
   const dayWord = currentStreak === 1 ? 'day' : 'days';
-  bullets.push(`The daily low has stayed above 68\u00b0F for: <strong>${currentStreak} ${dayWord}</strong>`);
+  bullets.push(`The daily low has stayed above ${useCelsius ? '20\u2009\u00b0C' : '68\u2009\u00b0F'} for: <strong>${currentStreak} ${dayWord}</strong>`);
 
   // Bullet 2: longest this season
+  const seasonStart = fmtWithYear(new Date(current.season.start));
   if (!includeCurrent) {
-    bullets.push(`Longest tropical night stretch this season: <strong>N/A</strong> (excluded)`);
+    bullets.push(`Longest tropical night stretch this season (${seasonStart}\u2009\u2013\u2009present): <strong>N/A</strong> (excluded)`);
   } else if (thisSeasonK > 0) {
     const { startDay, endDay } = streakDates(current, thisSeasonK);
     const dayWord2 = thisSeasonK === 1 ? 'day' : 'days';
-    bullets.push(`Longest tropical night stretch this season: <strong>${fmtShort(startDay)}\u2009\u2013\u2009${fmtShort(endDay)}</strong> (<strong>${thisSeasonK} ${dayWord2}</strong>)`);
+    bullets.push(`Longest tropical night stretch this season (${seasonStart}\u2009\u2013\u2009present): <strong>${fmtShort(startDay)}\u2009\u2013\u2009${fmtShort(endDay)}</strong> (<strong>${thisSeasonK} ${dayWord2}</strong>)`);
   } else {
-    bullets.push(`Longest tropical night stretch this season: <strong>N/A</strong>`);
+    bullets.push(`Longest tropical night stretch this season (${seasonStart}\u2009\u2013\u2009present): <strong>N/A</strong>`);
   }
 
   // Bullet 3: longest since earliest season
@@ -1776,6 +1808,14 @@ function updateStats(allResults, locationName) {
   statsCity.innerHTML = `For <strong>${locationName}</strong> through ${throughStr}:`;
   statsList.innerHTML = bullets.map(b => `<li>${b}</li>`).join('');
   statsBox.style.display = '';
+
+  // Update data-time display to match current includeToday state
+  const dataEnd = new Date();
+  if (!includeToday) dataEnd.setDate(dataEnd.getDate() - 1);
+  const dtDateStr = dataEnd.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('data-time').textContent = includeToday
+    ? `Data through ${dtDateStr} (today\u2019s low so far).`
+    : `Data through ${dtDateStr}.`;
 }
 
 // =========================================================================
@@ -1786,12 +1826,20 @@ async function fetchSeasonResults(location, count) {
   const seasons = makeSummerSeasons(count);
   let done = 0;
 
-  const promises = seasons.map(async (season) => {
+  const promises = seasons.map(async (season, idx) => {
     const temps = await fetchDailyLows(location, season.start, season.end);
     done++;
     showStatus(`${location.name} \u2014 fetching weather data\u2026 (${done}/${seasons.length})`);
     const tc = computeThermofront(temps);
-    return { season, k: tc.k, v: tc.v, starts: tc.starts };
+    const result = { season, k: tc.k, v: tc.v, starts: tc.starts };
+    // For current season (last one), also compute without-today version
+    if (idx === count - 1 && temps.length > 1) {
+      const tcY = computeThermofront(temps.slice(0, -1));
+      result.kNoToday = tcY.k;
+      result.vNoToday = tcY.v;
+      result.startsNoToday = tcY.starts;
+    }
+    return result;
   });
 
   const settled = await Promise.allSettled(promises);
@@ -1806,7 +1854,7 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
   const query = document.getElementById('loc-input').value.trim();
 
   if (!query) {
-    showError('Enter a US ZIP code or city name.');
+    showError('Enter a city or US ZIP code.');
     return;
   }
 
@@ -1827,26 +1875,19 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
 
     const results = await fetchSeasonResults(location, numSeasons);
 
-    // Fetch last-k-days data (last 42 days, regardless of season)
+    // Fetch last-k-days data (last 42 days, always through today)
     const lkEnd = new Date();
-    if (!includeToday) lkEnd.setDate(lkEnd.getDate() - 1);
     const lkStart = new Date(lkEnd);
     lkStart.setDate(lkStart.getDate() - (CONFIG.MAX_K - 1));
     const lkTemps = await fetchDailyLows(location, lkStart, lkEnd);
     lastKData = computeLastK(lkTemps);
+    lastKDataNoToday = computeLastK(lkTemps.slice(0, -1));
 
     // Cache results
     cachedLocation = location;
+    lastFetchTime = Date.now();
     if (numSeasons === 10) cachedResults10 = results;
     else cachedResults50 = results;
-
-    // Show data freshness timestamp in user's local timezone
-    const dataEnd = new Date();
-    if (!includeToday) dataEnd.setDate(dataEnd.getDate() - 1);
-    const dateStr = dataEnd.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-    document.getElementById('data-time').textContent = includeToday
-      ? `Data through ${dateStr} (today\u2019s low so far).`
-      : `Data through ${dateStr}.`;
 
     clearStatus();
     showChart();
@@ -2109,14 +2150,17 @@ document.getElementById('incl-current-toggle').addEventListener('change', (e) =>
     todayToggle.checked = false;
     todayToggle.disabled = true;
     localStorage.setItem('tf_today', 'false');
-    cachedResults10 = null;
-    cachedResults50 = null;
   } else {
     todayToggle.disabled = false;
   }
-  if (lastResults) {
+  // Re-fetch only if data is stale (>1 hour old)
+  if (lastResults && (Date.now() - lastFetchTime < 3600000)) {
     renderChart(lastResults, lastLocationName);
     updateStats(lastResults, lastLocationName);
+  } else if (cachedLocation) {
+    cachedResults10 = null;
+    cachedResults50 = null;
+    document.getElementById('zip-form').requestSubmit();
   }
 });
 
@@ -2132,9 +2176,13 @@ if (!includeCurrent) {
 document.getElementById('incl-today-toggle').addEventListener('change', (e) => {
   includeToday = e.target.checked;
   localStorage.setItem('tf_today', includeToday ? 'true' : 'false');
-  cachedResults10 = null;
-  cachedResults50 = null;
-  if (cachedLocation) {
+  // Re-fetch only if data is stale (>1 hour old)
+  if (lastResults && (Date.now() - lastFetchTime < 3600000)) {
+    renderChart(lastResults, lastLocationName);
+    updateStats(lastResults, lastLocationName);
+  } else if (cachedLocation) {
+    cachedResults10 = null;
+    cachedResults50 = null;
     document.getElementById('zip-form').requestSubmit();
   }
 });
