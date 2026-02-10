@@ -458,6 +458,27 @@ header .subtitle {
 }
 #export-btn:hover { opacity: 1; border-color: var(--accent); }
 
+/* --- Stats box --- */
+
+#stats-box {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  color: var(--text-card);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  transition: background 0.3s;
+}
+
+#stats-box strong { color: var(--text-card-strong); }
+
+#stats-box ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.3rem 0 0;
+}
+
 /* --- Explanation --- */
 
 #explanation {
@@ -614,6 +635,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
   #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
   #explanation { font-size: 0.8rem; padding: 0.75rem; }
+  #stats-box { font-size: 0.8rem; padding: 0.75rem 1rem; }
 }
 </style>
 </head>
@@ -661,6 +683,11 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     </div>
     <div id="chart-legend"></div>
     <button id="export-btn" title="Save as PNG">Save PNG</button>
+  </div>
+
+  <div id="stats-box" style="display:none;">
+    <p id="stats-city"></p>
+    <ul id="stats-list"></ul>
   </div>
 
   <div id="explanation">
@@ -869,6 +896,25 @@ async function geocodeQuery(query) {
       writeCache(cacheKey, loc);
       return loc;
     }
+  }
+  // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
+  if (zip) {
+    try {
+      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`);
+      if (zResp.ok) {
+        const zData = await zResp.json();
+        if (zData.places && zData.places.length > 0) {
+          const p = zData.places[0];
+          const loc = {
+            name: `${p.place_name}, ${p.state}`,
+            lat: parseFloat(p.latitude),
+            lon: parseFloat(p.longitude),
+          };
+          writeCache(cacheKey, loc);
+          return loc;
+        }
+      }
+    } catch (_) { /* fall through to error */ }
   }
   throw new Error(`No US location found for "${query}"`);
 }
@@ -1501,6 +1547,87 @@ function renderChart(allResults, locationName) {
 }
 
 // =========================================================================
+// Freezing-streak statistics
+// =========================================================================
+
+function updateStats(allResults, locationName) {
+  const statsBox = document.getElementById('stats-box');
+  const statsCity = document.getElementById('stats-city');
+  const statsList = document.getElementById('stats-list');
+  const fmtShort = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const fmtWithYear = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // 1. Current streak below freezing (from lastKData)
+  let currentStreak = 0;
+  if (lastKData) {
+    for (let k = 1; k <= lastKData.length; k++) {
+      if (lastKData[k - 1] <= 32) currentStreak = k;
+      else break;
+    }
+  }
+
+  // Helper: find longest freezing streak for a season result
+  function longestFreezingStreak(r) {
+    let best = 0;
+    for (let k = 1; k <= r.v.length; k++) {
+      if (r.v[k - 1] <= 32) best = k;
+      else break;
+    }
+    return best;
+  }
+
+  // Helper: compute date range for a streak
+  function streakDates(r, k) {
+    const s0 = new Date(r.season.start);
+    const startDay = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() + r.starts[k - 1]);
+    const endDay = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + k - 1);
+    return { startDay, endDay };
+  }
+
+  // 2. Longest streak this season
+  const current = allResults[allResults.length - 1];
+  const thisSeasonK = longestFreezingStreak(current);
+
+  // 3. Longest streak ever (across all seasons)
+  let allTimeK = 0;
+  let allTimeResult = null;
+  for (const r of allResults) {
+    const k = longestFreezingStreak(r);
+    if (k > allTimeK) { allTimeK = k; allTimeResult = r; }
+  }
+
+  // Build bullets
+  const bullets = [];
+
+  // Bullet 1: current streak
+  const dayWord = currentStreak === 1 ? 'day' : 'days';
+  bullets.push(`It has currently been below freezing for: <strong>${currentStreak} ${dayWord}</strong>`);
+
+  // Bullet 2: longest this season
+  if (thisSeasonK > 0) {
+    const { startDay, endDay } = streakDates(current, thisSeasonK);
+    const dayWord2 = thisSeasonK === 1 ? 'day' : 'days';
+    bullets.push(`Longest stretch below freezing this season: <strong>${fmtShort(startDay)}\u2009\u2013\u2009${fmtShort(endDay)}</strong> (<strong>${thisSeasonK} ${dayWord2}</strong>)`);
+  } else {
+    bullets.push(`Longest stretch below freezing this season: <strong>N/A</strong>`);
+  }
+
+  // Bullet 3: longest since earliest season
+  const sinceYear = allResults[0].season.year;
+  if (allTimeK > 0 && allTimeResult) {
+    const { startDay, endDay } = streakDates(allTimeResult, allTimeK);
+    const dayWord3 = allTimeK === 1 ? 'day' : 'days';
+    bullets.push(`Longest stretch (since ${sinceYear}) below freezing: <strong>${fmtWithYear(startDay)}\u2009\u2013\u2009${fmtWithYear(endDay)}</strong> (<strong>${allTimeK} ${dayWord3}</strong>)`);
+  } else {
+    bullets.push(`Longest stretch (since ${sinceYear}) below freezing: <strong>N/A</strong>`);
+  }
+
+  statsCity.innerHTML = `For <strong>${locationName}</strong>:`;
+  statsList.innerHTML = bullets.map(b => `<li>${b}</li>`).join('');
+  statsBox.style.display = '';
+}
+
+// =========================================================================
 // Main
 // =========================================================================
 
@@ -1570,6 +1697,7 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     clearStatus();
     showChart();
     renderChart(results, location.name);
+    updateStats(results, location.name);
 
   } catch (err) {
     showError(err.message);
@@ -1580,6 +1708,13 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
 
 // Pre-fill with default ZIP
 document.getElementById('loc-input').value = '06515';
+
+// Auto-load from URL query parameter (?zip=...)
+const urlZip = new URLSearchParams(window.location.search).get('zip');
+if (urlZip) {
+  document.getElementById('loc-input').value = urlZip;
+  document.getElementById('zip-form').requestSubmit();
+}
 
 // =========================================================================
 // Autocomplete
@@ -1757,6 +1892,7 @@ rangeToggle.addEventListener('click', async () => {
     lastResults = cached;
     lastLocationName = cachedLocation.name;
     renderChart(cached, cachedLocation.name);
+    updateStats(cached, cachedLocation.name);
     return;
   }
 
@@ -1775,6 +1911,7 @@ rangeToggle.addEventListener('click', async () => {
     clearStatus();
     showChart();
     renderChart(results, cachedLocation.name);
+    updateStats(results, cachedLocation.name);
   } catch (err) {
     showError(err.message);
   } finally {
