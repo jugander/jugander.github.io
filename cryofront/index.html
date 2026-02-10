@@ -906,7 +906,7 @@ async function geocodeQuery(query) {
         if (zData.places && zData.places.length > 0) {
           const p = zData.places[0];
           const loc = {
-            name: `${p.place_name}, ${p.state}`,
+            name: `${p['place name']}, ${p.state}`,
             lat: parseFloat(p.latitude),
             lon: parseFloat(p.longitude),
           };
