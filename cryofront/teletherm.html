@@ -365,11 +365,6 @@ header .subtitle {
 #explanation a { color: var(--accent); text-decoration: none; }
 #explanation a:hover { color: var(--accent-hover); text-decoration: underline; }
 
-#data-time {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-style: italic;
-}
 
 /* --- Crosslink --- */
 
@@ -497,6 +492,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
   #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
   #explanation { font-size: 0.8rem; padding: 0.75rem; }
+  .see-also { position: static; margin-bottom: 0.5rem; }
 }
 </style>
 </head>
@@ -540,13 +536,12 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     <strong>What is a teletherm?</strong> The <em>summer teletherm</em> is the
     calendar date of the year&rsquo;s highest daily high temperature; the
     <em>winter teletherm</em> is the date of the lowest daily low.
-    This chart tracks when those extreme days fall each year over 75 years.
+    This chart tracks when those extreme days fall each year, from 1951 through 2025.
     If the red dots drift later, summers are peaking later.
     If the blue dots shift, the coldest day is moving too.
     Dashed lines show the linear trend.
     The concept comes from
     <a href="https://doi.org/10.1371/journal.pone.0154184" target="_blank" rel="noopener">Dodds&nbsp;et&nbsp;al.&nbsp;(2016)</a>.
-    <span id="data-time"></span>
     <a href="#" id="details-link">More details&hellip;</a>
   </div>
 
@@ -566,7 +561,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       </p>
       <h4>Reading the chart</h4>
       <p>
-        The x-axis shows years (a 75-year span). The y-axis shows the day
+        The x-axis shows years (1951&ndash;2025). The y-axis shows the day
         of the year, labeled by month.
         <span style="color:#e84d60;">Red dots</span> mark the warmest day
         each year (highest daily high);
@@ -597,7 +592,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       <p>
         Daily high and low temperatures come from the
         <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
-        historical archive. Only fully completed years are included.
+        historical archive, covering 1951 through 2025. Only fully completed years are included.
       </p>
       <h4>Reference</h4>
       <p>
@@ -611,7 +606,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   </div>
 
   <footer>
-    Cooked with Claude by <a href="https://jugander.github.io/" target="_blank" rel="noopener">Johan Ugander</a>. Data through <span id="data-through"></span>. Last updated Feb 10, 2026.
+    Cooked with Claude by <a href="https://jugander.github.io/" target="_blank" rel="noopener">Johan Ugander</a>. Last updated Feb 10, 2026.
     Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>).
   </footer>
@@ -634,7 +629,7 @@ const CONFIG = {
 };
 
 const END_YEAR = new Date().getFullYear() - 1; // only completed years
-const START_YEAR = 1950;
+const START_YEAR = 1951;
 
 let chartInstance = null;
 let lastResults = null;
@@ -814,12 +809,11 @@ let selectedLoc = null;
 async function fetchYearData(loc, year) {
   const lat = loc.lat.toFixed(4);
   const lon = loc.lon.toFixed(4);
-  const isCurrentYear = (year === END_YEAR);
   const startDate = `${year}-01-01`;
-  const endDate = isCurrentYear ? isoDate(new Date()) : `${year}-12-31`;
+  const endDate = `${year}-12-31`;
 
   const cacheKey = `y_${lat}_${lon}_${year}`;
-  const cached = readCache(cacheKey, isCurrentYear ? CONFIG.CACHE_MAX_AGE_MS : undefined);
+  const cached = readCache(cacheKey);
   if (cached) return cached;
 
   const url = `${CONFIG.ARCHIVE_URL}?latitude=${lat}&longitude=${lon}` +
@@ -1324,11 +1318,6 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
 
     const results = computeTeletherms(yearDataMap);
 
-    // Timestamp
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-    document.getElementById('data-time').textContent = `Data through ${timeStr} today.`;
-
     clearStatus();
     showChart();
     renderChart(results, location.name);
@@ -1342,9 +1331,6 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
 
 // Default location (Burlington, VT — homage to the Dodds team at UVM)
 document.getElementById('loc-input').value = '05401';
-
-// Set data-through year in footer
-document.getElementById('data-through').textContent = END_YEAR;
 
 // Auto-load from URL query parameter (?zip=...)
 const urlZip = new URLSearchParams(window.location.search).get('zip');
@@ -1527,7 +1513,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
-    `Made by Teletherm, cooked with Claude by Johan Ugander. Data through ${END_YEAR}. Last updated Feb 10, 2026.`,
+    `Made by Teletherm, cooked with Claude by Johan Ugander. Data: ${START_YEAR}\u2013${END_YEAR}. Last updated Feb 10, 2026.`,
     totalW / 2, titleH + srcH + captionH + footerH / 2
   );
 
