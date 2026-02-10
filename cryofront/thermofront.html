@@ -549,18 +549,19 @@ header .subtitle {
 /* --- Crosslink --- */
 
 .see-also {
-  text-align: center;
-  margin-top: 1.5rem;
-  font-size: 0.7rem;
-  color: var(--footer-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .see-also a {
-  color: var(--footer-link);
+  color: var(--text-muted);
   text-decoration: none;
 }
 
-.see-also a:hover { color: var(--footer-link-hover); text-decoration: underline; }
+.see-also a:hover { text-decoration: underline; }
 
 /* --- Footer --- */
 
@@ -687,6 +688,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <header>
     <h1><svg class="logo-icon" viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff8c42"/><stop offset="100%" stop-color="#d64545"/></linearGradient></defs><g stroke="url(#lg)" stroke-linecap="round" fill="none"><g stroke-width="2.8"><line x1="16" y1="2" x2="16" y2="18"/><line x1="16" y1="2" x2="11.8" y2="7"/><line x1="16" y1="2" x2="20.2" y2="7"/><line x1="16" y1="9" x2="12.8" y2="12"/><line x1="16" y1="9" x2="19.2" y2="12"/></g><circle cx="16" cy="24" r="5" stroke="url(#lg)" stroke-width="2.2" fill="url(#lg)"/><g stroke-width="2.2"><line x1="3" y1="24" x2="8.5" y2="24"/><line x1="23.5" y1="24" x2="29" y2="24"/><line x1="7.3" y1="17.3" x2="11.3" y2="20"/><line x1="24.7" y1="17.3" x2="20.7" y2="20"/><line x1="7.3" y1="30.7" x2="11.3" y2="28"/><line x1="24.7" y1="30.7" x2="20.7" y2="28"/><line x1="16" y1="31.5" x2="16" y2="34"/></g></g></svg>Thermofront</h1>
     <p class="subtitle">The Pareto frontier of sustained heat.</p>
+    <div class="see-also">See also: <a href="index.html">[Cryofront]</a> <a href="teletherm.html">[Teletherm]</a></div>
     <div id="theme-toggle-wrap">
       <div class="slide-toggle" id="theme-toggle">
         <div class="slider"></div>
@@ -699,7 +701,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <form id="zip-form">
     <label for="loc-input">City/ZIP:</label>
     <div id="loc-wrap">
-      <input type="text" id="loc-input" placeholder="ZIP code or city name" autocomplete="off" spellcheck="false">
+      <input type="text" id="loc-input" placeholder="City or US ZIP code" autocomplete="off" spellcheck="false">
       <ul id="loc-suggestions"></ul>
     </div>
     <button type="submit" id="go-btn">Go</button>
@@ -836,9 +838,8 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     </div>
   </div>
 
-  <div class="see-also">See also: <a href="index.html">[Cryofront]</a> <a href="teletherm.html">[Teletherm]</a></div>
   <footer>
-    Last updated Feb 9, 2026. Cooked with Claude by Johan Ugander. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
+    Last updated Feb 10, 2026. Cooked with Claude by Johan Ugander. Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
     (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)
   </footer>
 </div>
@@ -939,14 +940,16 @@ async function geocodeQuery(query) {
   const cached = readCache(cacheKey);
   if (cached) return cached;
 
-  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
+  // Strip ", State/Country" suffix — the API only matches city names
+  const apiQuery = query.trim().replace(/,.*$/, '').trim();
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`);
   if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
   const data = await resp.json();
   const results = data.results || [];
 
   const zip = isZip(query) ? query : null;
 
-  // First pass: US result with matching postcode (if ZIP)
+  // ZIP lookup: US only
   if (zip) {
     for (const r of results) {
       if (r.country_code === 'US' && (r.postcodes || []).includes(zip)) {
@@ -955,17 +958,7 @@ async function geocodeQuery(query) {
         return loc;
       }
     }
-  }
-  // Fallback: first US result
-  for (const r of results) {
-    if (r.country_code === 'US') {
-      const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
-      writeCache(cacheKey, loc);
-      return loc;
-    }
-  }
-  // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
-  if (zip) {
+    // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
     try {
       const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`);
       if (zResp.ok) {
@@ -982,19 +975,35 @@ async function geocodeQuery(query) {
         }
       }
     } catch (_) { /* fall through to error */ }
+    throw new Error(`No US location found for ZIP "${query}"`);
   }
-  throw new Error(`No US location found for "${query}"`);
+  // City lookup: accept any country
+  if (results.length > 0) {
+    const r = results[0];
+    const isUS = r.country_code === 'US';
+    const name = isUS ? `${r.name}, ${r.admin1 || ''}` : `${r.name}, ${r.country || ''}`;
+    const loc = { name, lat: r.latitude, lon: r.longitude };
+    writeCache(cacheKey, loc);
+    return loc;
+  }
+  throw new Error(`No location found for "${query}"`);
 }
 
 // Autocomplete search — returns array of {name, admin1, lat, lon}
 async function geocodeSearch(query) {
-  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(query)}&count=10&language=en&format=json`);
   if (!resp.ok) return [];
   const data = await resp.json();
   return (data.results || [])
-    .filter(r => r.country_code === 'US')
     .slice(0, 5)
-    .map(r => ({ name: r.name, admin1: r.admin1 || '', lat: r.latitude, lon: r.longitude }));
+    .map(r => ({
+      name: r.name,
+      admin1: r.admin1 || '',
+      country: r.country || '',
+      countryCode: r.country_code || '',
+      lat: r.latitude,
+      lon: r.longitude,
+    }));
 }
 
 // Selected location from autocomplete (bypass geocoding on submit)
@@ -1882,11 +1891,14 @@ function showSuggestions(items) {
   acIdx = -1;
   items.forEach((item, i) => {
     const li = document.createElement('li');
-    li.innerHTML = `${item.name}<span class="loc-sub">${item.admin1}</span>`;
+    const isUS = item.countryCode === 'US';
+    const sub = isUS ? item.admin1 : (item.admin1 ? `${item.admin1}, ${item.country}` : item.country);
+    const displayName = isUS ? `${item.name}, ${item.admin1}` : `${item.name}, ${item.country}`;
+    li.innerHTML = `${item.name}<span class="loc-sub">${sub}</span>`;
     li.addEventListener('mousedown', (e) => {
       e.preventDefault(); // don't blur input
-      selectedLoc = { name: `${item.name}, ${item.admin1}`, lat: item.lat, lon: item.lon };
-      locInput.value = `${item.name}, ${item.admin1}`;
+      selectedLoc = { name: displayName, lat: item.lat, lon: item.lon };
+      locInput.value = displayName;
       closeSuggestions();
       document.getElementById('zip-form').requestSubmit();
     });
