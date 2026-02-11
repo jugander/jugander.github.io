@@ -870,6 +870,19 @@ function buildForward7dUrl(lat, lon) {
   return base.toString();
 }
 
+function buildArchiveSnowHistoryUrl(lat, lon, startDate, endDate) {
+  const base = new URL("https://archive-api.open-meteo.com/v1/archive");
+  base.searchParams.set("latitude", String(lat));
+  base.searchParams.set("longitude", String(lon));
+  base.searchParams.set("start_date", startDate);
+  base.searchParams.set("end_date", endDate);
+  base.searchParams.set("daily", "snowfall_sum");
+  base.searchParams.set("hourly", "snowfall");
+  base.searchParams.set("precipitation_unit", "inch");
+  base.searchParams.set("timezone", "auto");
+  return base.toString();
+}
+
 function pickHistoryCandidates(lat, lon, startDate, endDate) {
   const coreFields = [
     "temperature_2m",
@@ -990,6 +1003,27 @@ async function fetchSeasonHistory(lat, lon, startDate, endDate, signal) {
   throw new Error(`History request failed. ${tail}`);
 }
 
+async function fetchArchiveSnowHistory(lat, lon, startDate, endDate, signal) {
+  const url = buildArchiveSnowHistoryUrl(lat, lon, startDate, endDate);
+  try {
+    const res = await fetch(url, { signal });
+    if (!res.ok) {
+      const body = await readErrorTextSafe(res);
+      throw new Error(`Archive snowfall request failed. ${res.status} ${body}`);
+    }
+    const json = await res.json();
+    if (!json?.daily?.time?.length && !json?.hourly?.time?.length) {
+      throw new Error("Archive snowfall request failed. Empty payload.");
+    }
+    return mapArchiveSnowHistoryPayload(json);
+  } catch (err) {
+    if (isAbortError(err)) {
+      throw err;
+    }
+    throw err instanceof Error ? err : new Error("Archive snowfall request failed.");
+  }
+}
+
 function normalizeUnit(unit) {
   return typeof unit === "string" ? unit.trim().toLowerCase() : "";
 }
@@ -1081,6 +1115,54 @@ function mapHourlyPayload(hourly, hourlyUnits = {}) {
     shortwave_wm2: toNum(hourly.shortwave_radiation?.[idx]),
     snow_depth_in: convertLengthToIn(toNum(hourly.snow_depth?.[idx]), snowDepthUnit)
   }));
+}
+
+function mapArchiveSnowHistoryPayload(payload) {
+  const dailySnowByDay = new Map();
+  const dailyTime = payload?.daily?.time;
+  const dailyValues = payload?.daily?.snowfall_sum;
+  const dailyUnit = payload?.daily_units?.snowfall_sum || payload?.hourly_units?.snowfall || "unknown";
+  const hourlyUnit = payload?.hourly_units?.snowfall || payload?.daily_units?.snowfall_sum || "unknown";
+
+  if (Array.isArray(dailyTime)) {
+    for (let idx = 0; idx < dailyTime.length; idx += 1) {
+      const day = dailyTime[idx];
+      const snowIn = convertLengthToIn(toNum(dailyValues?.[idx]), dailyUnit);
+      if (typeof day === "string" && snowIn !== null) {
+        dailySnowByDay.set(day, snowIn);
+      }
+    }
+  }
+
+  const hourlySnowRecords = [];
+  const hourlyTime = payload?.hourly?.time;
+  const hourlySnow = payload?.hourly?.snowfall;
+  if (Array.isArray(hourlyTime)) {
+    for (let idx = 0; idx < hourlyTime.length; idx += 1) {
+      const time = hourlyTime[idx];
+      if (typeof time !== "string") {
+        continue;
+      }
+      hourlySnowRecords.push({
+        time,
+        snowfall_in: convertLengthToIn(toNum(hourlySnow?.[idx]), hourlyUnit)
+      });
+    }
+  }
+
+  const lastDailyDate =
+    Array.isArray(dailyTime) && dailyTime.length ? dailyTime[dailyTime.length - 1] : null;
+  const lastHourlyTime =
+    Array.isArray(hourlyTime) && hourlyTime.length ? hourlyTime[hourlyTime.length - 1] : null;
+
+  return {
+    dailySnowByDay,
+    hourlySnowRecords,
+    dailyUnit,
+    hourlyUnit,
+    lastDailyDate,
+    lastHourlyTime
+  };
 }
 
 function mapCurrentPayload(current, currentUnits = {}) {
@@ -1240,6 +1322,65 @@ function mergeHourlyRecords(archiveRecords, todayRecords, todayDate, maxHourKey 
   }
 
   return [...merged.values()].sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function applyArchiveSnowDailyToRecords(dailyRecords, archiveSnowHistory, currentHourKey) {
+  if (!Array.isArray(dailyRecords)) {
+    return {
+      dailyRecords: [],
+      todaySnowSumIn: null,
+      todaySnowThroughTime: null,
+      todaySnowDay: null
+    };
+  }
+
+  const dailySnowByDay = archiveSnowHistory?.dailySnowByDay instanceof Map ? archiveSnowHistory.dailySnowByDay : new Map();
+  const hourlySnowRecords = Array.isArray(archiveSnowHistory?.hourlySnowRecords)
+    ? archiveSnowHistory.hourlySnowRecords
+    : [];
+  const todaySnowDay = typeof currentHourKey === "string" && currentHourKey.length >= 10 ? currentHourKey.slice(0, 10) : null;
+
+  let todaySnowSumIn = null;
+  let todaySnowThroughTime = null;
+  if (todaySnowDay && typeof currentHourKey === "string" && currentHourKey) {
+    let sum = 0;
+    let hasTodaySamples = false;
+    for (const hourly of hourlySnowRecords) {
+      if (typeof hourly?.time !== "string") {
+        continue;
+      }
+      if (!hourly.time.startsWith(todaySnowDay) || hourly.time > currentHourKey) {
+        continue;
+      }
+      sum += Math.max(0, hourly.snowfall_in ?? 0);
+      todaySnowThroughTime = hourly.time;
+      hasTodaySamples = true;
+    }
+    if (hasTodaySamples) {
+      todaySnowSumIn = Number(sum.toFixed(3));
+    }
+  }
+
+  const nextDaily = dailyRecords.map((d) => {
+    let snowfallIn = dailySnowByDay.get(d.date);
+    if (todaySnowDay && d.date === todaySnowDay) {
+      snowfallIn = todaySnowSumIn === null ? 0 : todaySnowSumIn;
+    }
+    if (!Number.isFinite(snowfallIn)) {
+      snowfallIn = d.snowfall_in_sum;
+    }
+    return {
+      ...d,
+      snowfall_in_sum: Number(snowfallIn.toFixed(3))
+    };
+  });
+
+  return {
+    dailyRecords: nextDaily,
+    todaySnowSumIn,
+    todaySnowThroughTime,
+    todaySnowDay
+  };
 }
 
 function computeSunBakeIndex(shortwaveMjM2Sum, tempMaxF, thawHours) {
@@ -3331,8 +3472,8 @@ async function loadSeason(lat, lon, options = {}) {
 
   setStatus(
     modeInfo.dataMode === "station"
-      ? "Fetching season history, forecast, station checks, and station history..."
-      : "Fetching season history, forecast, and station checks..."
+      ? "Fetching season history, archive snowfall, forecast, station checks, and station history..."
+      : "Fetching season history, archive snowfall, forecast, and station checks..."
   );
   if (clearHoverTimer) {
     clearTimeout(clearHoverTimer);
@@ -3351,10 +3492,11 @@ async function loadSeason(lat, lon, options = {}) {
   const todayUrl = buildTodayUrl(lat, lon);
   const forwardUrl = buildForward7dUrl(lat, lon);
 
-  const [historyResult, todayResult, forwardResult] = await Promise.allSettled([
+  const [historyResult, todayResult, forwardResult, archiveSnowResult] = await Promise.allSettled([
     fetchSeasonHistory(lat, lon, seasonStart, historyEndDate, signal),
     fetch(todayUrl, { signal }),
-    fetch(forwardUrl, { signal })
+    fetch(forwardUrl, { signal }),
+    fetchArchiveSnowHistory(lat, lon, seasonStart, todayDate, signal)
   ]);
   if (isStale()) {
     return;
@@ -3366,12 +3508,27 @@ async function loadSeason(lat, lon, options = {}) {
     }
     throw new Error(historyResult.reason instanceof Error ? historyResult.reason.message : "History request failed.");
   }
+  if (archiveSnowResult.status !== "fulfilled") {
+    if (isAbortError(archiveSnowResult.reason)) {
+      throw archiveSnowResult.reason;
+    }
+    throw new Error(
+      archiveSnowResult.reason instanceof Error
+        ? archiveSnowResult.reason.message
+        : "Archive snowfall request failed."
+    );
+  }
 
   const historyJson = historyResult.value.json;
   const historySource = historyResult.value.source;
+  const archiveSnowHistory = archiveSnowResult.value;
   const timezone = historyJson.timezone || "auto";
   const currentHourKey = formatHourKeyInTimezone(new Date().toISOString(), timezone);
-  const snowfallUnit = historyJson?.hourly_units?.snowfall || historyJson?.hourly_units?.precipitation || "unknown";
+  const snowfallUnit =
+    archiveSnowHistory?.dailyUnit ||
+    historyJson?.hourly_units?.snowfall ||
+    historyJson?.hourly_units?.precipitation ||
+    "unknown";
   if (!historyJson?.hourly?.time?.length) {
     throw new Error("No hourly data returned for that point.");
   }
@@ -3484,10 +3641,20 @@ async function loadSeason(lat, lon, options = {}) {
   const mergedForDisplay = mergeModelAndStationHourly(modelHourlyRecords, stationHourlyRecords);
   const displayHourlyRecords = modeInfo.dataMode === "station" ? mergedForDisplay.hourlyRecords : modelHourlyRecords;
   const metricSourceStats = modeInfo.dataMode === "station" ? mergedForDisplay.metricSourceStats : createEmptyMetricSourceStats();
+  if (metricSourceStats?.snowfall) {
+    const snowfallTotal = (metricSourceStats.snowfall.station || 0) + (metricSourceStats.snowfall.model || 0);
+    metricSourceStats.snowfall.station = 0;
+    metricSourceStats.snowfall.model = Math.max(snowfallTotal, 1);
+  }
   activeDataMode = modeInfo.dataMode;
   activeMetricSourceStats = metricSourceStats;
 
-  const dailyRecords = derivePowderScores(aggregateDaily(displayHourlyRecords));
+  const archiveSnowApplied = applyArchiveSnowDailyToRecords(
+    aggregateDaily(displayHourlyRecords),
+    archiveSnowHistory,
+    currentHourKey
+  );
+  const dailyRecords = derivePowderScores(archiveSnowApplied.dailyRecords);
   const analysis = analyzeDailyRules(dailyRecords);
   const events = analysis.events;
   if (!dailyRecords.length) {
@@ -3498,6 +3665,11 @@ async function loadSeason(lat, lon, options = {}) {
   const displayStartDay = firstSnowRecord ? addDaysToDayKey(firstSnowRecord.date, -1) : seasonStart;
   const xRangeHourly = [`${displayStartDay}T00:00`, displayHourlyRecords[displayHourlyRecords.length - 1].time];
   const xRangeDaily = [displayStartDay, dailyRecords[dailyRecords.length - 1].date];
+  const dataThroughTime = displayHourlyRecords[displayHourlyRecords.length - 1]?.time || null;
+  const snowDataThroughTime =
+    archiveSnowApplied.todaySnowThroughTime ||
+    archiveSnowHistory?.lastHourlyTime ||
+    (archiveSnowHistory?.lastDailyDate ? `${archiveSnowHistory.lastDailyDate}T23:00` : null);
   const chartSources = deriveChartSources(modeInfo.dataMode, metricSourceStats);
   const stationBackedCharts = Object.entries(chartSources).filter(
     ([chartId, source]) => chartId !== "forecast-chart" && source !== "model"
@@ -3508,8 +3680,11 @@ async function loadSeason(lat, lon, options = {}) {
     `Season: ${seasonStart} to ${todayDate} (history through ${historyEndDate}) | ` +
     `Display start: ${displayStartDay} | ` +
     `History source: ${historySource} | ` +
+    `Snow source: archive daily (today from archive hourly) | ` +
     `Snowfall unit: ${snowfallUnit} | ` +
     `Timezone: ${timezone} | ` +
+    `Data through: ${dataThroughTime ? `${dataThroughTime} ${timezone}` : "n/a"} | ` +
+    `Snow data through: ${snowDataThroughTime ? `${snowDataThroughTime} ${timezone}` : "n/a"} | ` +
     `Elevation: ${elevationTxt} | ` +
     `Forward horizon: ${forwardHourlyRecords.length} h | ` +
     `Station confidence: ${stationConfidenceText} | ` +
