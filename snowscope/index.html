@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snowscope | Snowpack History Dashboard</title>
+  <link rel="preconnect" href="https://cdn.plot.ly">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1 class="brand-line">
+        <span class="brand-main">Snowscope:</span>
+        <span class="brand-sub">Snowpack History Dashboard</span>
+      </h1>
+      <p>
+        Data from Open-Meteo. Snow season from Nov 1. Use local observations and avalanche bulletins for decision making.
+      </p>
+    </header>
+
+    <section class="controls">
+      <form id="query-form">
+        <label>
+          Latitude
+          <input id="lat-input" name="lat" type="number" step="any" min="-90" max="90" required placeholder="37.783687">
+        </label>
+        <label>
+          Longitude
+          <input id="lon-input" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-119.516807">
+        </label>
+        <button id="map-picker-open" type="button" class="map-picker-open">Select on map</button>
+        <button type="submit">Load Season</button>
+      </form>
+      <nav class="location-shortcuts" aria-label="Saved locations">
+        <a href="#" class="location-shortcut" data-lat="37.783687" data-lon="-119.516807">
+          Mt Watkins Summit, CA (8,461 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.748747" data-lon="-119.587162">
+          Yosemite Valley Visitor Center, CA (~4,029 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.876900" data-lon="-119.343600">
+          Tuolumne Meadows, CA (~8,694 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="40.437780" data-lon="-121.533830">
+          Lassen NP, CA (~6,700 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="36.608170" data-lon="-118.671060">
+          Peak Lake Hut, CA
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.787460" data-lon="-119.524440">
+          Snow Creek Cabin, CA (~7,650 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.626780" data-lon="-119.549750">
+          Ostrander Ski Hut, CA (~8,500 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="39.370200" data-lon="-120.320970">
+          Frog Lake Huts, CA (~7,600 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="39.368279" data-lon="-120.367241">
+          Peter Grubb Hut, CA (~7,819 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="38.924884" data-lon="-120.403535">
+          Robbs Hut, CA (~6,686 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="38.006440" data-lon="-107.946850">
+          Last Dollar Hut, CO (~10,980 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.849700" data-lon="-107.767440">
+          OPUS Hut, CO (~11,700 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="38.037006" data-lon="-107.808495">
+          Blue Lakes Hut, CO (~9,380 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.939440" data-lon="-107.818060">
+          Telluride, CO (8,754 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.936110" data-lon="-107.865280">
+          Mountain Village, CO (9,512 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.894670" data-lon="-107.823080">
+          Gold Hill Summit, CO (12,746 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="44.543700" data-lon="-72.814300">
+          Mt Mansfield Summit, VT (4,393 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="42.637600" data-lon="-73.166200">
+          Mt Graylock Summit, MA (3,491 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="41.839300" data-lon="-73.276300">
+          Mohawk Mtn Summit, CT (~1,600 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="41.308300" data-lon="-72.927900">
+          New Haven, CT (~59 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="44.465450" data-lon="-72.745180">
+          von Trapp Lodge, VT (~1,355 ft)
+        </a>
+      </nav>
+      <p id="status" aria-live="polite"></p>
+      <div id="view-mode-banner" class="view-mode-banner"></div>
+    </section>
+
+    <section class="meta" id="meta"></section>
+    <section class="summary" id="summary"></section>
+    <section class="chart-card station-card">
+      <div class="chart-card-head">
+        <h2>Station Cross-Check + Confidence</h2>
+      </div>
+      <div id="station-check" class="station-check"></div>
+    </section>
+
+    <section class="chart-card timeline-card" data-chart-card data-chart-id="events-timeline-chart">
+      <div class="chart-card-head">
+        <div class="timeline-head-main">
+          <h2>Detected Event Timeline</h2>
+          <div class="timeline-legend" aria-label="Event type legend">
+            <span class="timeline-legend-item"><span class="timeline-swatch freeze"></span>Freeze-Thaw</span>
+            <span class="timeline-legend-item"><span class="timeline-swatch rain"></span>Rain-on-Snow</span>
+            <span class="timeline-legend-item"><span class="timeline-swatch wind"></span>Wind Slab</span>
+            <span class="timeline-legend-item"><span class="timeline-swatch sun"></span>Sun-Bake</span>
+          </div>
+        </div>
+        <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+      </div>
+      <div id="events-timeline-chart" class="chart chart-timeline"></div>
+    </section>
+
+    <section class="charts">
+      <article class="chart-card" data-chart-card data-chart-id="temperature-chart">
+        <div class="chart-card-head">
+          <h2>Hourly Temperature (F)</h2>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="freeze" aria-label="Explain Freeze-Thaw rule" title="Explain rule logic">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="temperature-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="precip-chart">
+        <div class="chart-card-head">
+          <h2>Daily Rain/Snow Depth (in/day)</h2>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="rain" aria-label="Explain Rain-on-Snow rule" title="Explain rule logic">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="precip-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="powder-chart">
+        <div class="chart-card-head">
+          <h2>Powder Score (0-100)</h2>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="powder" aria-label="Explain Powder Score logic" title="Explain rule logic">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="powder-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="snowpack-chart">
+        <div class="chart-card-head">
+          <h2>Estimated Snowpack Depth (in)</h2>
+          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+        </div>
+        <div id="snowpack-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="wind-chart">
+        <div class="chart-card-head">
+          <h2>Daily Wind (mph)</h2>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="wind" aria-label="Explain Wind Slab rule" title="Explain rule logic">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="wind-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="sun-chart">
+        <div class="chart-card-head">
+          <h2>Daily Sun Strength (Shortwave MJ/m^2)</h2>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="sun" aria-label="Explain Sun-Bake rule" title="Explain rule logic">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="sun-chart" class="chart"></div>
+      </article>
+      <article class="chart-card" data-chart-card data-chart-id="forecast-chart">
+        <div class="chart-card-head">
+          <h2>Forward 7d Outlook</h2>
+          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+        </div>
+        <div id="forecast-chart" class="chart"></div>
+      </article>
+    </section>
+
+    <section class="chart-card events-card">
+      <h2>Detected Snowpack Pattern Windows</h2>
+      <p class="events-note">
+        Heuristic flags only. Events older than 7 days are grayed out.
+      </p>
+      <div id="events-list" class="events-list"></div>
+    </section>
+  </main>
+
+  <div id="rule-help-modal" class="modal" hidden>
+    <button class="modal-backdrop" data-close-rule-help aria-label="Close help"></button>
+    <article class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="rule-help-title">
+      <header class="modal-header">
+        <h3 id="rule-help-title">Rule Logic</h3>
+        <button id="rule-help-close" class="modal-close" type="button" aria-label="Close help">Close</button>
+      </header>
+      <p id="rule-help-body" class="modal-body"></p>
+    </article>
+  </div>
+
+  <div id="map-picker-modal" class="modal" hidden>
+    <button class="modal-backdrop" data-close-map-picker aria-label="Close map picker"></button>
+    <article class="modal-panel map-picker-panel" role="dialog" aria-modal="true" aria-labelledby="map-picker-title">
+      <header class="modal-header">
+        <h3 id="map-picker-title">Select Location on Map</h3>
+        <button id="map-picker-close" class="modal-close" type="button" aria-label="Close map picker">Close</button>
+      </header>
+      <p class="map-picker-note">Click map to place pin. Drag pin to fine-tune location.</p>
+      <div id="map-picker-canvas" class="map-picker-canvas" aria-label="Map location picker"></div>
+      <p id="map-picker-coords" class="map-picker-coords"></p>
+      <div class="map-picker-actions">
+        <button id="map-picker-pick" type="button">Pick location and load season</button>
+      </div>
+    </article>
+  </div>
+</body>
+</html>
