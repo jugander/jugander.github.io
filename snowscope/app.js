@@ -98,6 +98,7 @@ const PLOT_LEFT_MARGIN = 96;
 const LINKED_CHART_IDS = [
   "events-timeline-chart",
   "temperature-chart",
+  "freezing-level-chart",
   "precip-chart",
   "powder-chart",
   "snowpack-chart",
@@ -115,6 +116,7 @@ const DAILY_X_CHART_IDS = new Set([
 const CHART_IDS_WITH_SOURCE = [
   "events-timeline-chart",
   "temperature-chart",
+  "freezing-level-chart",
   "precip-chart",
   "powder-chart",
   "snowpack-chart",
@@ -125,6 +127,7 @@ const CHART_IDS_WITH_SOURCE = [
 const CHART_SOURCE_METRICS = {
   "events-timeline-chart": ["temperature", "wind", "snowfall", "rain", "snow_depth", "shortwave"],
   "temperature-chart": ["temperature"],
+  "freezing-level-chart": ["freezing_level"],
   "precip-chart": ["snowfall", "rain"],
   "powder-chart": ["temperature", "wind", "snowfall", "rain", "snow_depth", "shortwave"],
   "snowpack-chart": ["snow_depth"],
@@ -144,7 +147,8 @@ const METRIC_SOURCE_LABELS = {
   precip: "Precipitation",
   wind: "Wind",
   shortwave: "Shortwave Radiation",
-  snow_depth: "Snow Depth"
+  snow_depth: "Snow Depth",
+  freezing_level: "Freezing Elevation"
 };
 const chartBaseShapes = {};
 let sharedHoverDayKey = null;
@@ -846,6 +850,7 @@ function buildTodayUrl(lat, lon) {
       "precipitation",
       "wind_speed_10m",
       "shortwave_radiation",
+      "freezing_level_height",
       "snow_depth"
     ].join(",")
   );
@@ -890,7 +895,8 @@ function pickHistoryCandidates(lat, lon, startDate, endDate) {
     "rain",
     "precipitation",
     "wind_speed_10m",
-    "shortwave_radiation"
+    "shortwave_radiation",
+    "freezing_level_height"
   ];
   const withSnowDepth = [...coreFields, "snow_depth"];
 
@@ -1067,6 +1073,34 @@ function convertLengthToIn(value, unitRaw) {
   return value;
 }
 
+function convertLengthToFt(value, unitRaw) {
+  if (value === null) {
+    return null;
+  }
+
+  const unit = normalizeUnit(unitRaw);
+  // Open-Meteo freezing_level_height is typically meters; some archive responses omit unit metadata.
+  if (!unit) {
+    return value * 3.280839895;
+  }
+  if (unit === "ft" || unit.includes("foot") || unit.includes("feet")) {
+    return value;
+  }
+  if (unit === "m" || unit === "meter" || unit === "metre") {
+    return value * 3.280839895;
+  }
+  if (unit === "cm" || unit.includes("centimeter")) {
+    return value / 30.48;
+  }
+  if (unit === "mm" || unit.includes("millimeter")) {
+    return value / 304.8;
+  }
+  if (unit === "in" || unit.includes("inch")) {
+    return value / 12;
+  }
+  return value;
+}
+
 function convertSpeedToMph(value, unitRaw) {
   if (value === null) {
     return null;
@@ -1103,6 +1137,7 @@ function mapHourlyPayload(hourly, hourlyUnits = {}) {
   const windUnit = hourlyUnits.wind_speed_10m;
   const gustUnit = hourlyUnits.wind_gusts_10m || windUnit;
   const snowDepthUnit = hourlyUnits.snow_depth;
+  const freezingLevelUnit = hourlyUnits.freezing_level_height;
 
   return hourly.time.map((time, idx) => ({
     time,
@@ -1113,7 +1148,8 @@ function mapHourlyPayload(hourly, hourlyUnits = {}) {
     wind_mph: convertSpeedToMph(toNum(hourly.wind_speed_10m?.[idx]), windUnit),
     gust_mph: convertSpeedToMph(toNum(hourly.wind_gusts_10m?.[idx]), gustUnit),
     shortwave_wm2: toNum(hourly.shortwave_radiation?.[idx]),
-    snow_depth_in: convertLengthToIn(toNum(hourly.snow_depth?.[idx]), snowDepthUnit)
+    snow_depth_in: convertLengthToIn(toNum(hourly.snow_depth?.[idx]), snowDepthUnit),
+    freezing_level_ft: convertLengthToFt(toNum(hourly.freezing_level_height?.[idx]), freezingLevelUnit)
   }));
 }
 
@@ -2224,7 +2260,8 @@ function createEmptyMetricSourceStats() {
     precip: { station: 0, model: 0 },
     wind: { station: 0, model: 0 },
     shortwave: { station: 0, model: 0 },
-    snow_depth: { station: 0, model: 0 }
+    snow_depth: { station: 0, model: 0 },
+    freezing_level: { station: 0, model: 0 }
   };
 }
 
@@ -2273,6 +2310,12 @@ function mergeModelAndStationHourly(modelHourlyRecords, stationHourlyRecords) {
       stationRecord?.snow_depth_in,
       modelRecord.snow_depth_in
     );
+    const freezingLevelFt = chooseMetricValue(
+      metricSourceStats,
+      "freezing_level",
+      stationRecord?.freezing_level_ft,
+      modelRecord.freezing_level_ft
+    );
 
     return {
       time: modelRecord.time,
@@ -2283,7 +2326,8 @@ function mergeModelAndStationHourly(modelHourlyRecords, stationHourlyRecords) {
       wind_mph: windMph,
       gust_mph: stationRecord?.gust_mph ?? modelRecord.gust_mph,
       shortwave_wm2: shortwaveWm2,
-      snow_depth_in: snowDepthIn
+      snow_depth_in: snowDepthIn,
+      freezing_level_ft: freezingLevelFt
     };
   });
 
@@ -2413,6 +2457,7 @@ function mapStationObservationsToHourly(features, timezone) {
       gust_mph: convertQuantityToMph(p.windGust),
       shortwave_wm2: null,
       snow_depth_in: convertQuantityToIn(p.snowDepth),
+      freezing_level_ft: null,
       obs_timestamp_ms: timestamp ? new Date(timestamp).getTime() : null
     };
 
@@ -2442,7 +2487,8 @@ function mapStationObservationsToHourly(features, timezone) {
       wind_mph: r.wind_mph,
       gust_mph: r.gust_mph,
       shortwave_wm2: r.shortwave_wm2,
-      snow_depth_in: r.snow_depth_in
+      snow_depth_in: r.snow_depth_in,
+      freezing_level_ft: r.freezing_level_ft
     }));
 }
 
@@ -2853,7 +2899,7 @@ function interpolateCrossingTime(startIso, endIso, fraction) {
   return fmtDateTimeLocal(new Date(crossMs));
 }
 
-function appendTempSegment(series, x0, y0, x1, y1) {
+function appendSplitSegment(series, x0, y0, x1, y1) {
   if (!Number.isFinite(y0) || !Number.isFinite(y1)) {
     return;
   }
@@ -2865,15 +2911,15 @@ function appendTempSegment(series, x0, y0, x1, y1) {
   series.y.push(y0, y1, null);
 }
 
-function buildSplitTemperatureSeries(hourlyRecords) {
+function buildSplitSeriesByThreshold(hourlyRecords, valueAccessor, threshold) {
   const blue = { x: [], y: [] };
   const red = { x: [], y: [] };
 
   for (let i = 0; i < hourlyRecords.length - 1; i += 1) {
     const current = hourlyRecords[i];
     const next = hourlyRecords[i + 1];
-    const y0 = current.temperature_f;
-    const y1 = next.temperature_f;
+    const y0 = valueAccessor(current);
+    const y1 = valueAccessor(next);
 
     if (y0 === null || y1 === null) {
       continue;
@@ -2881,27 +2927,35 @@ function buildSplitTemperatureSeries(hourlyRecords) {
 
     const x0 = current.time;
     const x1 = next.time;
-    const below0 = y0 <= FREEZE_F;
-    const below1 = y1 <= FREEZE_F;
+    const below0 = y0 <= threshold;
+    const below1 = y1 <= threshold;
 
     if (below0 === below1) {
-      appendTempSegment(below0 ? blue : red, x0, y0, x1, y1);
+      appendSplitSegment(below0 ? blue : red, x0, y0, x1, y1);
       continue;
     }
 
-    const fraction = (FREEZE_F - y0) / (y1 - y0);
+    const fraction = (threshold - y0) / (y1 - y0);
     const crossX = interpolateCrossingTime(x0, x1, fraction);
 
     if (below0) {
-      appendTempSegment(blue, x0, y0, crossX, FREEZE_F);
-      appendTempSegment(red, crossX, FREEZE_F, x1, y1);
+      appendSplitSegment(blue, x0, y0, crossX, threshold);
+      appendSplitSegment(red, crossX, threshold, x1, y1);
     } else {
-      appendTempSegment(red, x0, y0, crossX, FREEZE_F);
-      appendTempSegment(blue, crossX, FREEZE_F, x1, y1);
+      appendSplitSegment(red, x0, y0, crossX, threshold);
+      appendSplitSegment(blue, crossX, threshold, x1, y1);
     }
   }
 
   return { blue, red };
+}
+
+function buildSplitTemperatureSeries(hourlyRecords) {
+  return buildSplitSeriesByThreshold(hourlyRecords, (r) => r.temperature_f, FREEZE_F);
+}
+
+function buildSplitFreezingLevelSeries(hourlyRecords, locationElevationFt) {
+  return buildSplitSeriesByThreshold(hourlyRecords, (r) => r.freezing_level_ft, locationElevationFt);
 }
 
 function renderTemperatureChart(hourlyRecords, xRange) {
@@ -2955,6 +3009,97 @@ function renderTemperatureChart(hourlyRecords, xRange) {
 
   setBaseShapes("temperature-chart", [freezeLineShape]);
   Plotly.react("temperature-chart", data, layout, getPlotConfig());
+}
+
+function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt) {
+  const validElevation = Number.isFinite(locationElevationFt) ? locationElevationFt : null;
+  const split =
+    validElevation === null ? { blue: { x: [], y: [] }, red: { x: [], y: [] } } : buildSplitFreezingLevelSeries(hourlyRecords, validElevation);
+
+  const x = hourlyRecords.map((r) => r.time);
+  const y = hourlyRecords.map((r) => r.freezing_level_ft);
+  const hasData = y.some((v) => Number.isFinite(v));
+  const shapes = [];
+
+  if (validElevation !== null) {
+    shapes.push({
+      type: "line",
+      xref: "x",
+      yref: "y",
+      x0: xRange[0],
+      x1: xRange[1],
+      y0: validElevation,
+      y1: validElevation,
+      line: { color: "#62717d", width: 1, dash: "dot" }
+    });
+  }
+
+  const data =
+    validElevation === null
+      ? [
+          {
+            x,
+            y,
+            mode: "lines",
+            line: { color: "#597a95", width: 1.4 },
+            name: "Freezing Elev. (ft)",
+            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+          }
+        ]
+      : [
+          {
+            x: split.blue.x,
+            y: split.blue.y,
+            mode: "lines",
+            line: { color: "#2f86eb", width: 1.5 },
+            name: "Below site elev",
+            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+          },
+          {
+            x: split.red.x,
+            y: split.red.y,
+            mode: "lines",
+            line: { color: "#d94b45", width: 1.5 },
+            name: "Above site elev",
+            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+          }
+        ];
+
+  const layout = {
+    margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
+    paper_bgcolor: "#ffffff",
+    plot_bgcolor: "#ffffff",
+    xaxis: {
+      range: xRange,
+      showgrid: true,
+      gridcolor: "#e4ebf2",
+      title: "Time"
+    },
+    yaxis: {
+      title: "Freezing Elevation (ft)",
+      showgrid: true,
+      gridcolor: "#e4ebf2",
+      rangemode: "tozero"
+    },
+    shapes,
+    annotations: hasData
+      ? []
+      : [
+          {
+            x: 0.5,
+            y: 0.5,
+            xref: "paper",
+            yref: "paper",
+            text: "Freezing elevation unavailable for this range.",
+            showarrow: false,
+            font: { size: 12, color: "#617484" }
+          }
+        ],
+    legend: { orientation: "h", y: 1.1, x: 0 }
+  };
+
+  setBaseShapes("freezing-level-chart", shapes);
+  Plotly.react("freezing-level-chart", data, layout, getPlotConfig());
 }
 
 function renderPrecipChart(dailyRecords, xRange) {
@@ -3339,7 +3484,23 @@ function renderForwardChart(forwardHourlyRecords) {
   const snow = forwardHourlyRecords.map((r) => Math.max(0, r.snowfall_in ?? 0));
   const rain = forwardHourlyRecords.map((r) => Math.max(0, r.rain_in ?? 0));
   const wind = forwardHourlyRecords.map((r) => r.wind_mph);
+  const tempVals = forwardHourlyRecords.map((r) => r.temperature_f).filter((v) => Number.isFinite(v));
   const xRange = [x[0], x[x.length - 1]];
+
+  const tempMin = tempVals.length ? Math.min(...tempVals) : FREEZE_F - 6;
+  const tempMax = tempVals.length ? Math.max(...tempVals) : FREEZE_F + 6;
+  const tempSpread = Math.max(6, tempMax - tempMin);
+  const tempPad = Math.max(2.5, tempSpread * 0.12);
+  const tempRange = [Math.min(tempMin - tempPad, FREEZE_F - 1), Math.max(tempMax + tempPad, FREEZE_F + 1)];
+
+  const precipMax = Math.max(0, ...snow, ...rain);
+  const precipPad = Math.max(0.03, precipMax * 0.14);
+  const precipRange = [0, precipMax > 0 ? precipMax + precipPad : 0.2];
+
+  const windVals = wind.filter((v) => Number.isFinite(v));
+  const windMax = windVals.length ? Math.max(...windVals) : 0;
+  const windPad = Math.max(2, windMax * 0.12);
+  const windRange = [0, windMax > 0 ? windMax + windPad : 8];
 
   const freezeLineShape = {
     type: "line",
@@ -3414,6 +3575,7 @@ function renderForwardChart(forwardHourlyRecords) {
     },
     yaxis: {
       title: "Temperature (F)",
+      range: tempRange,
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
@@ -3421,7 +3583,7 @@ function renderForwardChart(forwardHourlyRecords) {
       title: "Rain/Snow (in/hr)",
       overlaying: "y",
       side: "right",
-      rangemode: "tozero",
+      range: precipRange,
       showgrid: false
     },
     yaxis3: {
@@ -3430,7 +3592,7 @@ function renderForwardChart(forwardHourlyRecords) {
       side: "right",
       anchor: "free",
       position: 0.9,
-      rangemode: "tozero",
+      range: windRange,
       showgrid: false
     },
     shapes: [freezeLineShape],
@@ -3567,8 +3729,9 @@ async function loadSeason(lat, lon, options = {}) {
   }
 
   const elevationM = toNum(historyJson.elevation);
+  const elevationFt = elevationM === null ? null : elevationM * 3.28084;
   const elevationTxt =
-    elevationM === null ? "n/a" : `${elevationM.toFixed(0)} m (${(elevationM * 3.28084).toFixed(0)} ft)`;
+    elevationM === null ? "n/a" : `${elevationM.toFixed(0)} m (${elevationFt.toFixed(0)} ft)`;
   const stationCrossCheckPromise = fetchStationCrossCheck(lat, lon, modelNow, elevationM, signal);
 
   let stationCrossCheckResolved = null;
@@ -3695,6 +3858,7 @@ async function loadSeason(lat, lon, options = {}) {
 
   renderEventsTimeline(events, xRangeDaily);
   renderTemperatureChart(displayHourlyRecords, xRangeHourly);
+  renderFreezingLevelChart(displayHourlyRecords, xRangeHourly, elevationFt);
   renderPrecipChart(dailyRecords, xRangeDaily);
   renderPowderChart(dailyRecords, xRangeDaily);
   renderSnowpackChart(dailyRecords, xRangeDaily);
