@@ -2160,26 +2160,37 @@ async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signa
       return { message: "No nearby NWS observation stations were returned." };
     }
 
+    const modelElevationFt =
+      modelElevationM !== null && Number.isFinite(modelElevationM)
+        ? modelElevationM * 3.28084
+        : null;
+
     const candidates = features
       .map((feature) => {
         const coords = feature?.geometry?.coordinates;
         const stationLon = toNum(Array.isArray(coords) ? coords[0] : null);
         const stationLat = toNum(Array.isArray(coords) ? coords[1] : null);
+        const stationElevFt = convertQuantityToFt(feature?.properties?.elevation);
         const distanceMi =
           stationLat === null || stationLon === null ? null : haversineMiles(lat, lon, stationLat, stationLon);
+        const horizontalFt = distanceMi === null ? Number.POSITIVE_INFINITY : distanceMi * 5280;
+        const verticalFt =
+          modelElevationFt !== null && Number.isFinite(stationElevFt) ? Math.abs(stationElevFt - modelElevationFt) : 0;
+        const selectionScoreFt = Number.isFinite(horizontalFt)
+          ? Math.hypot(horizontalFt, verticalFt)
+          : Number.POSITIVE_INFINITY;
         return {
           feature,
           stationLat,
           stationLon,
-          distanceMi
+          distanceMi,
+          stationElevFt,
+          selectionScoreFt
         };
       })
       .sort((a, b) => {
-        const ad = a.distanceMi ?? Number.POSITIVE_INFINITY;
-        const bd = b.distanceMi ?? Number.POSITIVE_INFINITY;
-        return ad - bd;
-      })
-      .slice(0, 5);
+        return a.selectionScoreFt - b.selectionScoreFt || (a.distanceMi ?? 1e9) - (b.distanceMi ?? 1e9);
+      });
 
     const obsSettled = await Promise.allSettled(
       candidates.map(async (candidate) => {
@@ -2190,7 +2201,9 @@ async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signa
 
         const stationId = candidate.feature?.properties?.stationIdentifier || stationUrl.split("/").pop() || "station";
         const stationName = candidate.feature?.properties?.name || stationId;
-        const stationElevFt = convertQuantityToFt(candidate.feature?.properties?.elevation);
+        const stationElevFt = Number.isFinite(candidate.stationElevFt)
+          ? candidate.stationElevFt
+          : convertQuantityToFt(candidate.feature?.properties?.elevation);
         const latest = await fetchJsonOrThrow(`${stationUrl}/observations/latest`, signal);
         const p = latest?.properties || {};
 
@@ -2235,11 +2248,21 @@ async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signa
     }
 
     observations.sort((a, b) => {
-      const aDistance = a.distance_mi ?? Number.POSITIVE_INFINITY;
-      const bDistance = b.distance_mi ?? Number.POSITIVE_INFINITY;
-      const aAge = a.obs_age_min ?? 1e6;
-      const bAge = b.obs_age_min ?? 1e6;
-      return aDistance * 5 + aAge - (bDistance * 5 + bAge);
+      const aDistanceMi = a.distance_mi ?? Number.POSITIVE_INFINITY;
+      const bDistanceMi = b.distance_mi ?? Number.POSITIVE_INFINITY;
+      const aHorizontalFt = Number.isFinite(aDistanceMi) ? aDistanceMi * 5280 : Number.POSITIVE_INFINITY;
+      const bHorizontalFt = Number.isFinite(bDistanceMi) ? bDistanceMi * 5280 : Number.POSITIVE_INFINITY;
+      const aVerticalFt =
+        modelElevationFt !== null && Number.isFinite(a.elevation_ft) ? Math.abs(a.elevation_ft - modelElevationFt) : 0;
+      const bVerticalFt =
+        modelElevationFt !== null && Number.isFinite(b.elevation_ft) ? Math.abs(b.elevation_ft - modelElevationFt) : 0;
+      const aScoreFt = Number.isFinite(aHorizontalFt)
+        ? Math.hypot(aHorizontalFt, aVerticalFt)
+        : Number.POSITIVE_INFINITY;
+      const bScoreFt = Number.isFinite(bHorizontalFt)
+        ? Math.hypot(bHorizontalFt, bVerticalFt)
+        : Number.POSITIVE_INFINITY;
+      return aScoreFt - bScoreFt || aDistanceMi - bDistanceMi || aVerticalFt - bVerticalFt;
     });
 
     const best = observations[0];
