@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CT DEEP Consent Orders (Remediation/RSR/CERCLA Subset)</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #fffdf8;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --line: #d7d4cc;
+      --head: #e7efe8;
+    }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #f8f6ee, var(--bg));
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 16px 28px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.55rem;
+      line-height: 1.25;
+    }
+    .meta {
+      color: var(--muted);
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .method {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      line-height: 1.35;
+    }
+    .method h2 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+    .method p {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+    .method ul {
+      margin: 0 0 8px 18px;
+      padding: 0;
+      font-size: 0.9rem;
+    }
+    .method li {
+      margin: 2px 0;
+    }
+    .kw {
+      display: inline-block;
+      padding: 1px 6px;
+      margin: 0 1px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #eceff3;
+      color: #111827;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.88em;
+      white-space: nowrap;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.9rem;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .toolbar input {
+      flex: 1 1 260px;
+      max-width: 420px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+    }
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: auto;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 980px;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border-bottom: 1px solid #ece9e0;
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--head);
+      cursor: pointer;
+      user-select: none;
+      z-index: 1;
+    }
+    th:hover {
+      background: #dbe9dd;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .foot {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>CT DEEP Consent Orders: Remediation/RSR/CERCLA Subset (1999-present)</h1>
+    <div class="meta">Generated 2026-02-11T22:14:44 from <code>remediation_cercla_consent_subset_1999_present.csv</code>. Local PDFs folder: <code>remediation_cercla_consent_subset_1999_present_pdfs/</code></div>
+    <div class="stats">
+      <div class="chip">Rows: 13</div>
+      <div class="chip">PDFs downloaded: 12</div>
+      <div class="chip">Missing source URL: 1</div>
+      <div class="chip">Download failed: 0</div>
+    </div>
+    <section class="method">
+      <h2>How This List Was Built</h2>
+      <p><strong>Database accessed:</strong> Connecticut Open Data (Socrata), DEEP formal enforcement datasets:</p>
+      <ul>
+        <li><a href="https://data.ct.gov/Environment-and-Natural-Resources/Formal-Enforcement-Case-Summaries-1999-2021/tvbr-6b6t" target="_blank" rel="noopener"><code>tvbr-6b6t</code></a> (Formal Enforcement Case Summaries 1999-2021)</li>
+        <li><a href="https://data.ct.gov/Environment-and-Natural-Resources/Formal-Enforcement-Case-Summaries-2021-Present/t2bf-45ba" target="_blank" rel="noopener"><code>t2bf-45ba</code></a> (Formal Enforcement Case Summaries 2021-Present)</li>
+      </ul>
+
+      <p><strong>Rough database stats from local snapshots used for this build:</strong></p>
+      <ul>
+        <li><strong><span class="kw">tvbr-6b6t</span>:</strong> records <strong>2070</strong>; with PDF URL <strong>586</strong>; missing PDF URL <strong>1484</strong>; with order metadata <strong>586</strong></li>
+        <li><strong><span class="kw">t2bf-45ba</span>:</strong> records <strong>210</strong>; with PDF URL <strong>210</strong>; missing PDF URL <strong>0</strong>; with order metadata <strong>209</strong></li>
+        <li><strong>Combined:</strong> records <strong>2280</strong>; with PDF URL <strong>796</strong>; missing PDF URL <strong>1484</strong>; with order metadata <strong>795</strong></li>
+      </ul>
+
+      <p><strong>How queried:</strong> rows were exported from each dataset's API (<code>/api/views/&lt;id&gt;/rows.json?accessType=DOWNLOAD</code>) and filtered to consent actions (<code>consent</code> in enforcement-action field).</p>
+      <p><strong>Inclusion rule:</strong> consent-action rows were included if at least one condition matched:</p>
+      <ul>
+        <li>Consent-action keyword in enforcement-action field (case-insensitive): <span class="kw">consent</span></li>
+        <li>Program keyword in program field (case-insensitive): <span class="kw">site remediation</span></li>
+        <li>Remediation-standards text keywords/patterns (case-insensitive): <span class="kw">remediation standard regulation</span>, <span class="kw">remediation standards regulation</span>, <span class="kw">rsr</span>, <span class="kw">22a-133k</span></li>
+        <li>CERCLA text keywords/patterns (case-insensitive): <span class="kw">cercla</span>, <span class="kw">comprehensive environmental response, compensation, and liability act</span>, and U.S. Code citation variants matching <span class="kw">42 U.S.C. § 9600-9609</span></li>
+      </ul>
+      <p><strong>Possible shortcomings:</strong></p>
+      <ul>
+        <li>This filter is metadata-based; it does not full-text search every PDF body.</li>
+        <li>Keyword matches can miss relevant orders if wording differs, contains typos, uses uncommon abbreviations, or appears only in scanned/OCR-imperfect PDFs.</li>
+        <li>Some source rows have no <code>pdf_url</code> or no order number, so records can be real but not directly downloadable from dataset metadata.</li>
+        <li>Coverage and links depend on DEEP/Open Data publication quality and can lag updates or include broken links over time.</li>
+      </ul>
+    </section>
+    <div class="toolbar">
+      <input id="filterInput" type="search" placeholder="Filter by any text (respondent, town, order number, program, reason)">
+    </div>
+    <div class="table-wrap">
+      <table id="ordersTable">
+        <thead>
+          <tr>
+            <th data-col="0">Date</th>
+            <th data-col="1">Respondent</th>
+            <th data-col="2">Town</th>
+            <th data-col="3">Program</th>
+            <th data-col="4">Order #</th>
+            <th data-col="5">Match Reason</th>
+            <th data-col="6">Links</th>
+            <th data-col="7">Download Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td data-sort="2009-08-18">2009-08-18</td><td data-sort="drake petroleum company, inc.">Drake Petroleum Company, Inc.</td><td data-sort="mansfield">Mansfield</td><td data-sort="site remediation">Site Remediation</td><td data-sort=""></td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="missing_source_url">N/A</td><td data-sort="missing_source_url">missing_source_url</td></tr><tr><td data-sort="2012-03-16">2012-03-16</td><td data-sort="kell-strom tool company, inc.">Kell-Strom Tool Company, Inc.</td><td data-sort="wethersfield">Wethersfield</td><td data-sort="underground storage tank">Underground Storage Tank</td><td data-sort="cowsust11002.pdf">COWSUST11002.pdf</td><td data-sort="remediation_standards_reference">remediation_standards_reference</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2012-03-16__COWSUST11002__Kell-Strom_Tool_Company_Inc.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/COWSUST11002.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2012-05-10">2012-05-10</td><td data-sort="john f. condon, jr.">John F. Condon, Jr.</td><td data-sort="suffield">Suffield</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd221.pdf">SRD221.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2012-05-10__SRD221__John_F._Condon_Jr.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD221.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2012-06-25">2012-06-25</td><td data-sort="mercury fuel service inc. and lafayette realty company">Mercury Fuel Service Inc. and Lafayette Realty Company</td><td data-sort="haddam">Haddam</td><td data-sort="underground storage tank">Underground Storage Tank</td><td data-sort="cowsust11001.pdf">COWSUST11001.pdf</td><td data-sort="remediation_standards_reference">remediation_standards_reference</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2012-06-25__COWSUST11001__Mercury_Fuel_Service_Inc._and_Lafayette_Realty_Com.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/COWSUST11001.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2018-01-05">2018-01-05</td><td data-sort="the southern connecticut gas company">The Southern Connecticut Gas Company</td><td data-sort="new haven">New Haven</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd231.pdf">SRD231.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2018-01-05__SRD231__The_Southern_Connecticut_Gas_Company.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD231.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2018-04-10">2018-04-10</td><td data-sort="gtj realty, lp">GTJ Realty, LP</td><td data-sort="milford">Milford</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd232.pdf">SRD232.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2018-04-10__SRD232__GTJ_Realty_LP.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD232.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2018-04-10">2018-04-10</td><td data-sort="gtj realty, lp">GTJ Realty, LP</td><td data-sort="shelton">Shelton</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd233.pdf">SRD233.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2018-04-10__SRD233__GTJ_Realty_LP.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD233.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2018-09-05">2018-09-05</td><td data-sort="110 mountain grove street, llc">110 Mountain Grove Street, LLC</td><td data-sort="bridgeport">Bridgeport</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd235.pdf">SRD235.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2018-09-05__SRD235__110_Mountain_Grove_Street_LLC.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD235.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2018-09-10">2018-09-10</td><td data-sort="85 pond mill, llc">85 Pond Mill, LLC</td><td data-sort="fairfield">Fairfield</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd234.pdf">SRD234.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2018-09-10__SRD234__85_Pond_Mill_LLC.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD234.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2019-05-02">2019-05-02</td><td data-sort="djr tamarack, llc">DJR Tamarack, LLC</td><td data-sort="danbury">Danbury</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd239.pdf">SRD239.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2019-05-02__SRD239__DJR_Tamarack_LLC.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD239.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2020-05-15">2020-05-15</td><td data-sort="rafferty-brown steel co. inc. of conn.">Rafferty-Brown Steel Co. Inc. of Conn.</td><td data-sort="waterbury">Waterbury</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd242.pdf">SRD242.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2020-05-15__SRD242__Rafferty-Brown_Steel_Co._Inc._of_Conn.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD242.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2020-08-03">2020-08-03</td><td data-sort="blj millennium, llc">BLJ Millennium, LLC</td><td data-sort="middletown">Middletown</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd243.pdf">SRD243.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2020-08-03__SRD243__BLJ_Millennium_LLC.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD243.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr><tr><td data-sort="2022-01-14">2022-01-14</td><td data-sort="linden cleaners, inc.">Linden Cleaners, Inc.</td><td data-sort="darien">Darien</td><td data-sort="site remediation">Site Remediation</td><td data-sort="srd245.pdf">SRD245.pdf</td><td data-sort="site_remediation_program">site_remediation_program</td><td data-sort="downloaded"><a href="remediation_cercla_consent_subset_1999_present_pdfs/2022-01-14__SRD245__Linden_Cleaners_Inc.pdf" target="_blank" rel="noopener">local PDF</a> | <a href="https://portal.ct.gov/-/media/deep/enforcement/consentorder/SRD245.pdf" target="_blank" rel="noopener">source URL</a></td><td data-sort="downloaded">downloaded</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="foot">Click any column header to sort. Use the filter box to narrow records.</div>
+  </div>
+  <script>
+    (function () {
+      const table = document.getElementById("ordersTable");
+      const tbody = table.querySelector("tbody");
+      const headers = table.querySelectorAll("th");
+      const filterInput = document.getElementById("filterInput");
+      let sortState = { col: 0, asc: true };
+
+      function sortRows(col, asc) {
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        rows.sort((a, b) => {
+          const aCell = a.children[col];
+          const bCell = b.children[col];
+          const aKey = (aCell.getAttribute("data-sort") || aCell.textContent || "").toLowerCase();
+          const bKey = (bCell.getAttribute("data-sort") || bCell.textContent || "").toLowerCase();
+          if (aKey < bKey) return asc ? -1 : 1;
+          if (aKey > bKey) return asc ? 1 : -1;
+          return 0;
+        });
+        rows.forEach(row => tbody.appendChild(row));
+      }
+
+      headers.forEach((th, i) => {
+        th.addEventListener("click", () => {
+          if (sortState.col === i) {
+            sortState.asc = !sortState.asc;
+          } else {
+            sortState.col = i;
+            sortState.asc = true;
+          }
+          sortRows(sortState.col, sortState.asc);
+        });
+      });
+
+      filterInput.addEventListener("input", () => {
+        const q = filterInput.value.trim().toLowerCase();
+        Array.from(tbody.querySelectorAll("tr")).forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = (!q || text.includes(q)) ? "" : "none";
+        });
+      });
+
+      sortRows(0, true);
+    })();
+  </script>
+</body>
+</html>

@@ -51,16 +51,16 @@
       <form id="query-form">
         <label>
           Latitude
-          <input id="lat-input" name="lat" type="number" step="any" min="-90" max="90" required placeholder="37.783687">
+          <input id="lat-input" name="lat" type="number" step="any" min="-90" max="90" required placeholder="39.19517">
         </label>
         <label>
           Longitude
-          <input id="lon-input" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-119.516807">
+          <input id="lon-input" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-120.2367">
         </label>
         <button id="map-picker-open" type="button" class="map-picker-open">Select on map</button>
         <button type="submit">Load Season</button>
       </form>
-      <nav class="location-shortcuts" aria-label="Saved locations">
+      <nav class="location-shortcuts" aria-label="Saved locations" hidden>
         <a href="#" class="location-shortcut" data-lat="37.783687" data-lon="-119.516807">
           Mt Watkins Summit, CA (8,461 ft)
         </a>

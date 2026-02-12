@@ -103,6 +103,10 @@ body.station-view .chart-card {
   gap: 6px;
 }
 
+.location-shortcuts[hidden] {
+  display: none !important;
+}
+
 .location-shortcut {
   display: inline-flex;
   align-items: center;

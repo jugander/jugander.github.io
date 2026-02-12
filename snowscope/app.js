@@ -7,6 +7,7 @@ const viewModeBannerEl = document.getElementById("view-mode-banner");
 const eventsListEl = document.getElementById("events-list");
 const latInputEl = document.getElementById("lat-input");
 const lonInputEl = document.getElementById("lon-input");
+const shortcutsNavEl = document.querySelector(".location-shortcuts");
 const shortcutEls = document.querySelectorAll(".location-shortcut");
 const chartCardEls = document.querySelectorAll("[data-chart-card]");
 const ruleHelpModalEl = document.getElementById("rule-help-modal");
@@ -21,9 +22,14 @@ const mapPickerCoordsEl = document.getElementById("map-picker-coords");
 const mapPickerCanvasEl = document.getElementById("map-picker-canvas");
 
 const FREEZE_F = 32;
-const DEFAULT_LAT = 37.783687;
-const DEFAULT_LON = -119.516807;
+const DEFAULT_LAT = 39.19517;
+const DEFAULT_LON = -120.2367;
 const NWS_API_ROOT = "https://api.weather.gov";
+const SHOW_SHORTCUT_PINS = new URLSearchParams(window.location.search).has("ju");
+
+if (shortcutsNavEl) {
+  shortcutsNavEl.hidden = !SHOW_SHORTCUT_PINS;
+}
 
 const THRESHOLDS = {
   minSnowpackForSurfaceEffectsIn: 2,
