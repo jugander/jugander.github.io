@@ -70,6 +70,95 @@ body.station-view .chart-card {
   background: linear-gradient(180deg, #ffffff 0%, #fafdfa 100%);
 }
 
+.sticky-mini-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 920;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(177, 198, 216, 0.88);
+  background: rgba(245, 251, 255, 0.88);
+  box-shadow: 0 1px 8px rgba(16, 35, 52, 0.08);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  transform: translateY(-120%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+
+.sticky-mini-header.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.sticky-mini-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 8px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sticky-mini-brand {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #1c5684;
+}
+
+.sticky-mini-pin {
+  min-width: 0;
+  max-width: min(52vw, 460px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #1f5b89;
+}
+
+.sticky-mini-pin:empty {
+  display: none;
+}
+
+.sticky-mini-pin:not(:empty)::after {
+  content: "|";
+  margin-left: 6px;
+  color: #72899c;
+  font-weight: 500;
+}
+
+.sticky-mini-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: #456176;
+}
+
+body.station-view .sticky-mini-header {
+  border-bottom-color: rgba(172, 196, 182, 0.9);
+  background: rgba(243, 249, 244, 0.9);
+}
+
+body.station-view .sticky-mini-pin {
+  color: #2d6655;
+}
+
+body.station-view .sticky-mini-brand {
+  color: #2a6252;
+}
+
+body.station-view .sticky-mini-meta {
+  color: #4d665a;
+}
+
 .page {
   max-width: 1280px;
   margin: 0 auto;
@@ -1116,6 +1205,28 @@ body.chart-expanded-open::before {
 
   .chart-card.expanded .chart {
     height: calc(100vh - 95px);
+  }
+
+  .sticky-mini-header {
+    padding: 3px 4px;
+  }
+
+  .sticky-mini-inner {
+    padding: 0 4px;
+    gap: 5px;
+  }
+
+  .sticky-mini-pin {
+    max-width: min(58vw, 300px);
+    font-size: 0.71rem;
+  }
+
+  .sticky-mini-brand {
+    font-size: 0.67rem;
+  }
+
+  .sticky-mini-meta {
+    font-size: 0.69rem;
   }
 
   .history-range-toggle {

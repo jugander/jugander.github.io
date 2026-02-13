@@ -2,6 +2,10 @@ const statusEl = document.getElementById("status");
 const formEl = document.getElementById("query-form");
 const metaEl = document.getElementById("meta");
 const summaryEl = document.getElementById("summary");
+const mainHeaderEl = document.querySelector(".header");
+const stickyMiniHeaderEl = document.getElementById("sticky-mini-header");
+const stickyMiniPinEl = document.getElementById("sticky-mini-pin");
+const stickyMiniMetaEl = document.getElementById("sticky-mini-meta");
 const stationCheckEl = document.getElementById("station-check");
 const viewModeBannerEl = document.getElementById("view-mode-banner");
 const eventsListEl = document.getElementById("events-list");
@@ -44,6 +48,8 @@ const HISTORY_RANGE_OPTIONS = new Set(["14d", "season"]);
 const LENGTH_UNIT_DEFAULT = "in";
 const LENGTH_UNIT_OPTIONS = new Set(["in", "cm"]);
 const SHOW_FORECAST_DEFAULT = true;
+const PIN_MATCH_MAX_MILES = 2.0;
+const PIN_MATCH_DEG_TOL = 0.00025;
 
 if (document.body) {
   document.body.classList.toggle("production-host", IS_PRODUCTION_HOST);
@@ -525,6 +531,88 @@ function isAbortError(err) {
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function setStickyMiniHeaderVisible(isVisible) {
+  if (!stickyMiniHeaderEl) {
+    return;
+  }
+  stickyMiniHeaderEl.classList.toggle("visible", Boolean(isVisible));
+}
+
+function normalizeShortcutLabel(raw) {
+  if (typeof raw !== "string") {
+    return "";
+  }
+  return raw.replace(/\s+/g, " ").trim().replace(/\s*\([^)]*\)\s*$/, "");
+}
+
+function findMatchingSavedPinName(lat, lon) {
+  if (!SHOW_SHORTCUT_PINS || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return "";
+  }
+  let bestDistance = Infinity;
+  let bestName = "";
+  for (const shortcut of shortcutEls) {
+    const pinLat = Number(shortcut.dataset.lat);
+    const pinLon = Number(shortcut.dataset.lon);
+    if (!Number.isFinite(pinLat) || !Number.isFinite(pinLon)) {
+      continue;
+    }
+    if (Math.abs(pinLat - lat) <= PIN_MATCH_DEG_TOL && Math.abs(pinLon - lon) <= PIN_MATCH_DEG_TOL) {
+      return normalizeShortcutLabel(shortcut.textContent || "");
+    }
+    const distMi = haversineMiles(lat, lon, pinLat, pinLon);
+    if (!Number.isFinite(distMi) || distMi >= bestDistance) {
+      continue;
+    }
+    bestDistance = distMi;
+    bestName = normalizeShortcutLabel(shortcut.textContent || "");
+  }
+  return bestDistance <= PIN_MATCH_MAX_MILES ? bestName : "";
+}
+
+function updateStickyMiniHeaderContent(lat, lon, elevationFt) {
+  if (!stickyMiniMetaEl || !stickyMiniPinEl) {
+    return;
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    stickyMiniPinEl.textContent = "";
+    stickyMiniMetaEl.textContent = "";
+    return;
+  }
+  const pinName = findMatchingSavedPinName(lat, lon);
+  stickyMiniPinEl.textContent = pinName;
+  const elevText = Number.isFinite(elevationFt) ? `${Math.round(elevationFt)} ft` : "n/a";
+  stickyMiniMetaEl.textContent = `Lat ${lat.toFixed(4)}, Lon ${lon.toFixed(4)} | Elev ${elevText}`;
+}
+
+function updateStickyMiniHeaderVisibility() {
+  if (!mainHeaderEl || !stickyMiniHeaderEl) {
+    return;
+  }
+  const headerRect = mainHeaderEl.getBoundingClientRect();
+  setStickyMiniHeaderVisible(headerRect.bottom <= 0);
+}
+
+function initStickyMiniHeader() {
+  if (!mainHeaderEl || !stickyMiniHeaderEl) {
+    return;
+  }
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setStickyMiniHeaderVisible(!(entry && entry.isIntersecting));
+      },
+      { threshold: 0 }
+    );
+    observer.observe(mainHeaderEl);
+  } else {
+    window.addEventListener("scroll", updateStickyMiniHeaderVisibility, { passive: true });
+    window.addEventListener("resize", updateStickyMiniHeaderVisibility);
+  }
+  updateStickyMiniHeaderVisibility();
 }
 
 function getChartCardById(chartId) {
@@ -2203,7 +2291,7 @@ function derivePowderScores(dailyRecords) {
     const daysSinceSnow = lastSnowIdx === null ? 30 : idx - lastSnowIdx;
     const recentSnowWeighted = snow0 + snow1 * 0.65 + snow2 * 0.4 + snow3 * 0.2;
     const recentSnowLweWeighted = snowLwe0 + snowLwe1 * 0.65 + snowLwe2 * 0.4 + snowLwe3 * 0.2;
-    const freshBoost = clamp(recentSnowWeighted / 9, 0, 1) * 58;
+    const freshBoost = clamp(recentSnowWeighted / 9, 0, 1) * 62;
 
     const tempMax0 = d.temp_max_f === null ? 28 : d.temp_max_f;
     const tempMax1 = prev1?.temp_max_f === null || prev1?.temp_max_f === undefined ? tempMax0 : prev1.temp_max_f;
@@ -2215,25 +2303,25 @@ function derivePowderScores(dailyRecords) {
     const thawHoursWeighted = thawHours0 + thawHours1 * 0.45 + thawHours2 * 0.2;
     const tempWarmFactor = clamp((warmTempWeighted - 32) / 14, 0, 1);
     const thawFactor = clamp(thawHoursWeighted / 12, 0, 1);
-    const thawPenalty = (0.6 * tempWarmFactor + 0.4 * thawFactor) * 24;
+    const thawPenalty = (0.55 * tempWarmFactor + 0.45 * thawFactor) * 20;
 
     const rainIn = Math.max(0, d.rain_raw_in_sum || 0);
     const rainPrev1 = Math.max(0, prev1?.rain_raw_in_sum || 0);
     const rainPrev2 = Math.max(0, prev2?.rain_raw_in_sum || 0);
     const recentRainWeighted = rainIn + rainPrev1 * 0.65 + rainPrev2 * 0.35;
-    const rainPenalty = clamp(recentRainWeighted / 0.45, 0, 1) * 56;
+    const rainPenalty = clamp(recentRainWeighted / 0.55, 0, 1) * 48;
 
     const sunMj = Math.max(0, d.shortwave_mj_m2_sum || 0);
     const sunPrev1 = Math.max(0, prev1?.shortwave_mj_m2_sum || 0);
     const sunWeighted = sunMj + sunPrev1 * 0.55;
     const sunFactor = clamp(sunWeighted / 24, 0, 1);
     const sunTempFactor = clamp((warmTempWeighted - 30) / 10, 0, 1);
-    const sunPenalty = sunFactor * (0.4 + 0.6 * sunTempFactor) * 18;
+    const sunPenalty = sunFactor * (0.4 + 0.6 * sunTempFactor) * 14;
 
     const windMax = Math.max(0, d.wind_max_mph || 0);
     const windPrev1 = Math.max(0, prev1?.wind_max_mph || 0);
     const windWeighted = windMax + windPrev1 * 0.5;
-    const windBasePenalty = clamp((windWeighted - 15) / 35, 0, 1) * 14;
+    const windBasePenalty = clamp((windWeighted - 15) / 35, 0, 1) * 11;
     const windPenalty = recentSnowWeighted > 2 ? windBasePenalty * 1.25 : windBasePenalty;
 
     const densityLwePerIn =
@@ -2244,23 +2332,23 @@ function derivePowderScores(dailyRecords) {
     const denseSnowPenalty =
       fluffRatioForScore === null
         ? 0
-        : fluffRatioForScore >= 9
+        : fluffRatioForScore >= 8.5
         ? 0
         : fluffRatioForScore >= 6
-        ? clamp((9 - fluffRatioForScore) / 3, 0, 1) * 8
-        : 8 + clamp((6 - fluffRatioForScore) / 3, 0, 1) * 12;
+        ? clamp((8.5 - fluffRatioForScore) / 2.5, 0, 1) * 6
+        : 6 + clamp((6 - fluffRatioForScore) / 3, 0, 1) * 9;
     const fluffBonus =
       recentSnowWeighted < 0.5 || fluffRatioForScore === null
         ? 0
         : fluffRatioForScore <= 10
         ? 0
         : fluffRatioForScore <= 15
-        ? clamp((fluffRatioForScore - 10) / 5, 0, 1) * 8
+        ? clamp((fluffRatioForScore - 10) / 5, 0, 1) * 10
         : fluffRatioForScore <= 20
-        ? 8 + clamp((fluffRatioForScore - 15) / 5, 0, 1) * 8
-        : 16 + clamp((fluffRatioForScore - 20) / 8, 0, 1) * 4;
+        ? 10 + clamp((fluffRatioForScore - 15) / 5, 0, 1) * 10
+        : 20 + clamp((fluffRatioForScore - 20) / 8, 0, 1) * 4;
 
-    const agePenalty = clamp((daysSinceSnow - 1) / 6, 0, 1) * 22;
+    const agePenalty = clamp((daysSinceSnow - 1) / 6, 0, 1) * 18;
 
     const coldFactor = clamp((35 - warmTempWeighted) / 10, 0, 1);
     const dryFactor = clamp(1 - recentRainWeighted / 0.12, 0, 1);
@@ -2277,13 +2365,13 @@ function derivePowderScores(dailyRecords) {
             0.1 * lowSunFactor +
             0.08 * lightWindFactor +
             0.08 * fluffQualityFactor) *
-          14;
+          17;
 
     const snowDepth = d.snow_depth_end_in ?? d.snow_depth_max_in ?? 0;
-    const coveragePenalty = snowDepth >= 8 ? 0 : snowDepth >= 4 ? 8 : snowDepth >= 2 ? 16 : 24;
+    const coveragePenalty = snowDepth >= 8 ? 0 : snowDepth >= 4 ? 5 : snowDepth >= 2 ? 11 : 18;
 
     const rawScore =
-      32 +
+      36 +
       freshBoost +
       qualityBonus -
       agePenalty -
@@ -4386,6 +4474,7 @@ async function loadSeason(lat, lon, options = {}) {
   const elevationFt = elevationM === null ? null : elevationM * 3.28084;
   const elevationTxt =
     elevationM === null ? "n/a" : `${elevationM.toFixed(0)} m (${elevationFt.toFixed(0)} ft)`;
+  updateStickyMiniHeaderContent(lat, lon, elevationFt);
   const stationCrossCheckPromise = fetchStationCrossCheck(lat, lon, modelNow, elevationM, signal);
 
   let stationCrossCheckResolved = null;
@@ -4839,6 +4928,7 @@ initRuleHelpModal();
 initChartSourceBadgeHelp();
 initMapPickerModal();
 initChartExpansionControls();
+initStickyMiniHeader();
 
 function initDefaults() {
   if (historyRangeEls.length) {
@@ -4856,6 +4946,7 @@ function initDefaults() {
   }
   latInputEl.value = String(INITIAL_DEFAULT_LAT);
   lonInputEl.value = String(INITIAL_DEFAULT_LON);
+  updateStickyMiniHeaderContent(INITIAL_DEFAULT_LAT, INITIAL_DEFAULT_LON, null);
   loadSeason(INITIAL_DEFAULT_LAT, INITIAL_DEFAULT_LON).catch((err) => {
     if (isAbortError(err)) {
       return;
