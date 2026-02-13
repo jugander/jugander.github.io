@@ -7,6 +7,9 @@ const viewModeBannerEl = document.getElementById("view-mode-banner");
 const eventsListEl = document.getElementById("events-list");
 const latInputEl = document.getElementById("lat-input");
 const lonInputEl = document.getElementById("lon-input");
+const historyRangeEls = document.querySelectorAll("input[name='history-range']");
+const lengthUnitEls = document.querySelectorAll("input[name='length-unit']");
+const forecastToggleEl = document.getElementById("forecast-toggle");
 const shortcutsNavEl = document.querySelector(".location-shortcuts");
 const shortcutEls = document.querySelectorAll(".location-shortcut");
 const chartCardEls = document.querySelectorAll("[data-chart-card]");
@@ -22,13 +25,38 @@ const mapPickerCoordsEl = document.getElementById("map-picker-coords");
 const mapPickerCanvasEl = document.getElementById("map-picker-canvas");
 
 const FREEZE_F = 32;
+const FREEZING_LEVEL_MIN_FT = 0;
+const FREEZING_LEVEL_MAX_FT = 15000;
+const FORECAST_WINDOW_DAYS = 7;
+const SEASON_TICK_STEP_DAYS = 7;
 const DEFAULT_LAT = 39.19517;
 const DEFAULT_LON = -120.2367;
+const JU_DEFAULT_LAT = 37.78746;
+const JU_DEFAULT_LON = -119.52444;
 const NWS_API_ROOT = "https://api.weather.gov";
 const SHOW_SHORTCUT_PINS = new URLSearchParams(window.location.search).has("ju");
+const LOCATION_HREF_NO_SCHEME = window.location.href.toLowerCase().replace(/^[a-z]+:\/\//, "");
+const IS_PRODUCTION_HOST = LOCATION_HREF_NO_SCHEME.startsWith("jugander.github.io");
+const INITIAL_DEFAULT_LAT = SHOW_SHORTCUT_PINS ? JU_DEFAULT_LAT : DEFAULT_LAT;
+const INITIAL_DEFAULT_LON = SHOW_SHORTCUT_PINS ? JU_DEFAULT_LON : DEFAULT_LON;
+const HISTORY_RANGE_DEFAULT = "14d";
+const HISTORY_RANGE_OPTIONS = new Set(["14d", "season"]);
+const LENGTH_UNIT_DEFAULT = "in";
+const LENGTH_UNIT_OPTIONS = new Set(["in", "cm"]);
+const SHOW_FORECAST_DEFAULT = true;
+
+if (document.body) {
+  document.body.classList.toggle("production-host", IS_PRODUCTION_HOST);
+  document.body.classList.toggle("beta-host", !IS_PRODUCTION_HOST);
+}
 
 if (shortcutsNavEl) {
   shortcutsNavEl.hidden = !SHOW_SHORTCUT_PINS;
+}
+
+if (latInputEl && lonInputEl) {
+  latInputEl.value = String(INITIAL_DEFAULT_LAT);
+  lonInputEl.value = String(INITIAL_DEFAULT_LON);
 }
 
 const THRESHOLDS = {
@@ -78,16 +106,105 @@ const RULE_HELP = {
       `Higher score means better expected soft-snow quality.\n\n` +
       `Main positive signal:\n` +
       `- Recent snowfall (weighted to favor the latest day)\n` +
-      `- A quality bonus for fresh + cold + dry + lower-density snow with lower sun/wind stress\n\n` +
+      `- A quality bonus for fresh + cold + dry snow with lower sun/wind stress\n` +
+      `- Fluff factor quality (snow depth per inch SWE; higher fluff ratio boosts score)\n\n` +
       `Main penalties:\n` +
       `- Snow age (days since fresh snow)\n` +
-      `- Thaw/warmth (max temp and thaw hours)\n` +
-      `- Rain amount\n` +
-      `- Sun exposure (shortwave, stronger when warm)\n` +
-      `- Wind loading/scouring potential\n` +
-      `- New-snow density (water per inch of snow; heavier snow gets penalized)\n` +
+      `- Thaw/warmth (weighted over recent days)\n` +
+      `- Rain amount (weighted over recent days)\n` +
+      `- Sun exposure (weighted over recent days, stronger when warm)\n` +
+      `- Wind loading/scouring potential (with recent-day carryover)\n` +
+      `- Dense/heavy new snow (low fluff ratio) gets penalized\n` +
       `- Thin snowpack coverage\n\n` +
       `This is for quick comparison across days, not a formal stability or avalanche forecast.`
+  },
+  chart_timeline: {
+    title: "Detected Event Timeline Chart",
+    chartId: "events-timeline-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Dates where heuristic event rules are triggered\n` +
+      `- One row each for Freeze-Thaw, Rain-on-Snow, Wind Slab, and Sun-Bake\n` +
+      `- Point color and row identify event type`
+  },
+  chart_temperature: {
+    title: "Hourly Temperature Chart",
+    chartId: "temperature-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Hourly 2 m air temperature over the selected history window\n` +
+      `- Line is blue at/below 32F and red above 32F\n` +
+      `- Dashed horizontal line marks 32F\n` +
+      `- If forecast continuation is enabled, the series extends into forecast hours`
+  },
+  chart_freezing_level: {
+    title: "Hourly Freezing Elevation Chart",
+    chartId: "freezing-level-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Hourly freezing-level elevation (ft)\n` +
+      `- Y-range is fixed to 0-15,000 ft; values above that are shown as dotted cap segments at 15,000 ft\n` +
+      `- Dashed horizontal reference line marks your selected location elevation\n` +
+      `- Colored segments indicate freezing level below/above site elevation\n` +
+      `- If forecast continuation is enabled, the series extends into forecast hours`
+  },
+  chart_precip: {
+    title: "Daily Rain/Snow Depth Chart",
+    chartId: "precip-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Daily snowfall depth and daily rain depth (display unit/day)\n` +
+      `- Snow bars (blue) and rain bars (red)\n` +
+      `- If forecast continuation is enabled, daily bars extend into forecast days`
+  },
+  chart_fluff: {
+    title: "Fluff Factor Chart",
+    chartId: "fluff-chart",
+    body:
+      `What this chart shows:\n` +
+      `- For snow days, fluff factor = snowfall depth / snow SWE (ratio, x:1)\n` +
+      `- Higher values indicate lower-density snow; lower values indicate denser snow\n` +
+      `- 10:1 is shown as a reference line\n` +
+      `- Values are shown only on days with measurable snowfall\n` +
+      `- If forecast continuation is enabled, projected snow-day ratios extend into forecast days`
+  },
+  chart_powder: {
+    title: "Powder Score Chart",
+    chartId: "powder-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Daily Powder Score from 0 to 100\n` +
+      `- Higher values indicate better expected soft-snow quality\n` +
+      `- Score combines fresh snow, snow age, thaw/rain/sun/wind effects, fluff factor (density), and coverage\n` +
+      `- If forecast continuation is enabled, projected daily scores extend into forecast days`
+  },
+  chart_snowpack: {
+    title: "Estimated Snowpack Depth Chart",
+    chartId: "snowpack-chart",
+    body:
+      `What this chart shows:\n` +
+      `- End-of-day snow depth (filled line)\n` +
+      `- Values are model/station-estimated snow depth (display unit), not in-resort manual stake reports\n` +
+      `- If forecast continuation is enabled, depth extends into forecast days`
+  },
+  chart_wind: {
+    title: "Daily Wind Chart",
+    chartId: "wind-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Daily average wind speed and daily maximum wind speed (mph)\n` +
+      `- Used with recent snowfall context for wind slab heuristic windows\n` +
+      `- If forecast continuation is enabled, daily wind extends into forecast days`
+  },
+  chart_sun: {
+    title: "Daily Sun Strength Chart",
+    chartId: "sun-chart",
+    body:
+      `What this chart shows:\n` +
+      `- Daily shortwave radiation total (MJ/m^2/day)\n` +
+      `- Secondary line: Sun-bake index (0-100)\n` +
+      `- Used to flag strong sun-bake pattern windows when snowpack is active\n` +
+      `- If forecast continuation is enabled, daily sun extends into forecast days`
   }
 };
 
@@ -100,46 +217,38 @@ const EVENT_TIMELINE_META = {
 
 const PLOT_LEFT_MARGIN = 96;
 
-// Intentionally excludes forecast-chart so forward outlook hover remains isolated.
 const LINKED_CHART_IDS = [
   "events-timeline-chart",
   "temperature-chart",
   "freezing-level-chart",
   "precip-chart",
+  "fluff-chart",
   "powder-chart",
   "snowpack-chart",
   "wind-chart",
   "sun-chart"
 ];
-const DAILY_X_CHART_IDS = new Set([
-  "events-timeline-chart",
-  "precip-chart",
-  "powder-chart",
-  "snowpack-chart",
-  "wind-chart",
-  "sun-chart"
-]);
 const CHART_IDS_WITH_SOURCE = [
   "events-timeline-chart",
   "temperature-chart",
   "freezing-level-chart",
   "precip-chart",
+  "fluff-chart",
   "powder-chart",
   "snowpack-chart",
   "wind-chart",
-  "sun-chart",
-  "forecast-chart"
+  "sun-chart"
 ];
 const CHART_SOURCE_METRICS = {
   "events-timeline-chart": ["temperature", "wind", "snowfall", "rain", "snow_depth", "shortwave"],
   "temperature-chart": ["temperature"],
   "freezing-level-chart": ["freezing_level"],
   "precip-chart": ["snowfall", "rain"],
-  "powder-chart": ["temperature", "wind", "snowfall", "rain", "snow_depth", "shortwave"],
+  "fluff-chart": ["snowfall", "precip", "rain"],
+  "powder-chart": ["temperature", "wind", "snowfall", "rain", "precip", "snow_depth", "shortwave"],
   "snowpack-chart": ["snow_depth"],
   "wind-chart": ["wind"],
-  "sun-chart": ["shortwave"],
-  "forecast-chart": []
+  "sun-chart": ["shortwave"]
 };
 const CHART_SOURCE_LABELS = {
   model: "Model",
@@ -165,7 +274,17 @@ let activeLoadController = null;
 let activeChartSources = {};
 let activeMetricSourceStats = null;
 let activeDataMode = "model";
+let activeDisplayTimezone = "UTC";
+let activeModeOptions = {
+  viewMode: "location",
+  dataMode: "model",
+  stationName: "",
+  stationId: "",
+  stationUrl: ""
+};
 const tzHourFormatterCache = new Map();
+const tzShortNameByDayCache = new Map();
+const tzHoverPartsFormatterCache = new Map();
 let mapPickerMap = null;
 let mapPickerMarker = null;
 let mapPickerLatLon = null;
@@ -183,8 +302,12 @@ function fmtDateLocal(dateObj) {
   return `${y}-${m}-${d}`;
 }
 
+function normalizeTimezoneKey(timezone) {
+  return typeof timezone === "string" && timezone && timezone !== "auto" ? timezone : "UTC";
+}
+
 function getTzHourFormatter(timezone) {
-  const tzKey = typeof timezone === "string" && timezone && timezone !== "auto" ? timezone : "UTC";
+  const tzKey = normalizeTimezoneKey(timezone);
   if (tzHourFormatterCache.has(tzKey)) {
     return tzHourFormatterCache.get(tzKey);
   }
@@ -210,6 +333,153 @@ function getTzHourFormatter(timezone) {
   }
   tzHourFormatterCache.set(tzKey, formatter);
   return formatter;
+}
+
+function getTzHoverPartsFormatter(timezone) {
+  const tzKey = normalizeTimezoneKey(timezone);
+  if (tzHoverPartsFormatterCache.has(tzKey)) {
+    return tzHoverPartsFormatterCache.get(tzKey);
+  }
+  let formatter;
+  try {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tzKey,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    });
+  } catch {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    });
+  }
+  tzHoverPartsFormatterCache.set(tzKey, formatter);
+  return formatter;
+}
+
+function parseChartXStringParts(value) {
+  if (typeof value !== "string" || !value) {
+    return null;
+  }
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2})(?::(\d{2})(?::\d{2}(?:\.\d{1,3})?)?)?)?$/
+  );
+  if (!match) {
+    return null;
+  }
+  const [, year, month, day, hourRaw, minuteRaw] = match;
+  const hour = hourRaw ?? "00";
+  const minute = minuteRaw ?? "00";
+  const monthNum = Number.parseInt(month, 10);
+  const dayNum = Number.parseInt(day, 10);
+  if (!Number.isFinite(monthNum) || !Number.isFinite(dayNum)) {
+    return null;
+  }
+  return {
+    year,
+    month,
+    day,
+    monthNum,
+    dayNum,
+    hour,
+    minute,
+    dayKey: `${year}-${month}-${day}`
+  };
+}
+
+function getTzShortNameForDay(dayKey, timezone = activeDisplayTimezone) {
+  if (typeof dayKey !== "string" || dayKey.length < 10) {
+    return "UTC";
+  }
+  const tzKey = normalizeTimezoneKey(timezone);
+  const key = `${tzKey}|${dayKey}`;
+  if (tzShortNameByDayCache.has(key)) {
+    return tzShortNameByDayCache.get(key);
+  }
+
+  const parts = parseChartXStringParts(`${dayKey}T12:00`);
+  if (!parts) {
+    tzShortNameByDayCache.set(key, tzKey);
+    return tzKey;
+  }
+
+  const probe = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), 12, 0, 0));
+  let shortName = tzKey;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tzKey,
+      timeZoneName: "short"
+    });
+    const tzPart = formatter.formatToParts(probe).find((part) => part.type === "timeZoneName");
+    if (tzPart?.value) {
+      shortName = tzPart.value;
+    }
+  } catch {
+    shortName = "UTC";
+  }
+  tzShortNameByDayCache.set(key, shortName);
+  return shortName;
+}
+
+function getHoverTimestampParts(xValue, timezone = activeDisplayTimezone) {
+  const direct = parseChartXStringParts(xValue);
+  if (direct) {
+    return direct;
+  }
+
+  const dateObj = parseChartXDate(xValue);
+  if (!dateObj) {
+    return null;
+  }
+  const formatter = getTzHoverPartsFormatter(timezone);
+  const byType = {};
+  for (const part of formatter.formatToParts(dateObj)) {
+    if (part.type !== "literal") {
+      byType[part.type] = part.value;
+    }
+  }
+  const monthNum = Number.parseInt(byType.month ?? "", 10);
+  const dayNum = Number.parseInt(byType.day ?? "", 10);
+  const year = byType.year;
+  const hour = byType.hour;
+  const minute = byType.minute;
+  if (!year || !Number.isFinite(monthNum) || !Number.isFinite(dayNum) || !hour || !minute) {
+    return null;
+  }
+  const month = String(monthNum).padStart(2, "0");
+  const day = String(dayNum).padStart(2, "0");
+  return {
+    year,
+    month,
+    day,
+    monthNum,
+    dayNum,
+    hour,
+    minute,
+    dayKey: `${year}-${month}-${day}`
+  };
+}
+
+function formatChartHoverTimestamp(xValue, timezone = activeDisplayTimezone) {
+  const parts = getHoverTimestampParts(xValue, timezone);
+  if (!parts) {
+    return "";
+  }
+  const tzShort = getTzShortNameForDay(parts.dayKey, timezone);
+  return `${parts.monthNum}/${parts.dayNum} ${parts.hour}:${parts.minute} ${tzShort}`;
+}
+
+function buildHoverTimeLabels(xValues, timezone = activeDisplayTimezone) {
+  return xValues.map((xValue) => formatChartHoverTimestamp(xValue, timezone));
 }
 
 function formatHourKeyInTimezone(timestampIso, timezone) {
@@ -361,7 +631,7 @@ function openChartSourceHelpModal(chartId) {
   const explanationLines = [
     `${CHART_SOURCE_LABELS.station}: all plotted values for this chart came from station observations.`,
     `${CHART_SOURCE_LABELS.mixed}: station observations are used where available, with model fallback for missing metrics/hours.`,
-    `${CHART_SOURCE_LABELS.model}: chart is fully model-driven (including all forward-forecast panels).`
+    `${CHART_SOURCE_LABELS.model}: chart is fully model-driven (including forecast continuations when enabled).`
   ];
 
   const modeLine =
@@ -485,6 +755,53 @@ function closeRuleHelpModal() {
   ruleHelpModalEl.hidden = true;
 }
 
+function getChartHelpSourceFeeds(chartId) {
+  const chartSpecificLineById = {
+    "events-timeline-chart":
+      "- Event markers are computed heuristics derived from daily chart inputs (historical and, when enabled, forecast; no direct API event feed).",
+    "temperature-chart":
+      "- Temperature values use Open-Meteo hourly 2 m temperature.",
+    "freezing-level-chart":
+      "- Freezing elevation values use Open-Meteo hourly freezing level height.",
+    "precip-chart":
+      "- Snow bars use Open-Meteo Archive daily snowfall totals (with current day from archive hourly snowfall-to-date).",
+    "fluff-chart":
+      "- Fluff factor uses daily snowfall (Archive daily snowfall, with current day from archive hourly snowfall-to-date) divided by daily snow-liquid equivalent (hourly precipitation minus hourly rain).",
+    "powder-chart":
+      "- Powder score is computed by Snowscope from snow amount/timing, thaw, rain, wind, sun, coverage, and fluff-factor quality.",
+    "snowpack-chart":
+      "- Snow depth uses Open-Meteo snow depth estimates (end-of-day depth series).",
+    "wind-chart":
+      "- Wind uses daily aggregates built from hourly wind speed values.",
+    "sun-chart":
+      "- Sun strength uses daily shortwave-radiation totals with a derived sun-bake index."
+  };
+  const chartSpecific = chartSpecificLineById[chartId] || "- Metric mapping follows this chart's plotted series.";
+  return [
+    "Source feeds:",
+    "- Historical model baseline: Open-Meteo historical weather API (`historical-forecast` preferred, `archive` fallback).",
+    "- Forecast continuation (when enabled): Open-Meteo forecast API.",
+    "- Station augmentation in station-data mode: NOAA/NWS Weather.gov station observations, with model fallback for missing metrics.",
+    chartSpecific
+  ].join("\n");
+}
+
+function buildChartRuleHelpDataSourceText(chartId) {
+  const source = activeChartSources?.[chartId] || "model";
+  const sourceLabel = CHART_SOURCE_LABELS[source] || CHART_SOURCE_LABELS.model;
+  const modeLine =
+    activeDataMode === "station"
+      ? "Station-data mode is active: station observations are used where available with model fallback."
+      : "Model-data mode is active: chart values are model-derived.";
+  const forecastLine = getShowForecastEnabled()
+    ? `Forecast continuation is on: historical series are extended into the ${FORECAST_WINDOW_DAYS}-day forecast window.`
+    : "Forecast continuation is off: chart shows historical values only.";
+  const feedLines = getChartHelpSourceFeeds(chartId);
+  const metricBreakdown = summarizeMetricSourceForChart(chartId);
+  const breakdownLine = metricBreakdown ? `\nCurrent metric-source mix:\n${metricBreakdown}` : "";
+  return `Data source status: ${sourceLabel}\n${modeLine}\n${forecastLine}\n\n${feedLines}${breakdownLine}`;
+}
+
 function openRuleHelpModal(ruleId) {
   if (!ruleHelpModalEl || !ruleHelpTitleEl || !ruleHelpBodyEl) {
     return;
@@ -494,7 +811,8 @@ function openRuleHelpModal(ruleId) {
     return;
   }
   ruleHelpTitleEl.textContent = content.title;
-  ruleHelpBodyEl.textContent = content.body;
+  const sourceSuffix = content.chartId ? `\n\n${buildChartRuleHelpDataSourceText(content.chartId)}` : "";
+  ruleHelpBodyEl.textContent = `${content.body}${sourceSuffix}`;
   ruleHelpModalEl.hidden = false;
 }
 
@@ -692,6 +1010,246 @@ function getBaseShapes(chartId) {
   return cloneShapes(chartBaseShapes[chartId] || []);
 }
 
+function getSelectedHistoryRange() {
+  for (const input of historyRangeEls) {
+    if (input.checked) {
+      return HISTORY_RANGE_OPTIONS.has(input.value) ? input.value : HISTORY_RANGE_DEFAULT;
+    }
+  }
+  return HISTORY_RANGE_DEFAULT;
+}
+
+function getShowForecastEnabled() {
+  if (!forecastToggleEl) {
+    return SHOW_FORECAST_DEFAULT;
+  }
+  return Boolean(forecastToggleEl.checked);
+}
+
+function getSelectedLengthUnit() {
+  for (const input of lengthUnitEls) {
+    if (input.checked) {
+      return LENGTH_UNIT_OPTIONS.has(input.value) ? input.value : LENGTH_UNIT_DEFAULT;
+    }
+  }
+  return LENGTH_UNIT_DEFAULT;
+}
+
+function convertLengthInToDisplay(valueIn, unit = getSelectedLengthUnit()) {
+  if (!Number.isFinite(valueIn)) {
+    return null;
+  }
+  return unit === "cm" ? valueIn * 2.54 : valueIn;
+}
+
+function formatLengthFromIn(valueIn, decimals = 1, unit = getSelectedLengthUnit()) {
+  const valueDisplay = convertLengthInToDisplay(valueIn, unit);
+  if (!Number.isFinite(valueDisplay)) {
+    return "n/a";
+  }
+  return `${valueDisplay.toFixed(decimals)} ${unit}`;
+}
+
+function formatSignedLengthFromIn(valueIn, decimals = 1, unit = getSelectedLengthUnit()) {
+  const valueDisplay = convertLengthInToDisplay(valueIn, unit);
+  if (!Number.isFinite(valueDisplay)) {
+    return "n/a";
+  }
+  const sign = valueDisplay > 0 ? "+" : "";
+  return `${sign}${valueDisplay.toFixed(decimals)} ${unit}`;
+}
+
+function filterRuleMatches(ruleMatches, startDay, endDay) {
+  const next = {};
+  for (const [key, dates] of Object.entries(ruleMatches || {})) {
+    const safeDates = Array.isArray(dates) ? dates : [];
+    next[key] = safeDates.filter((day) => day >= startDay && day <= endDay);
+  }
+  return next;
+}
+
+function buildForecastBoundaryShapes(xRange, forecastStartX) {
+  if (!Array.isArray(xRange) || xRange.length < 2) {
+    return [];
+  }
+  const midnightLines = buildMidnightGuideShapes(xRange);
+  if (!forecastStartX) {
+    return midnightLines;
+  }
+  const xEnd = xRange[1];
+  if (!xEnd) {
+    return midnightLines;
+  }
+  return [
+    {
+      type: "rect",
+      xref: "x",
+      yref: "paper",
+      x0: forecastStartX,
+      x1: xEnd,
+      y0: 0,
+      y1: 1,
+      fillcolor: "rgba(160, 176, 191, 0.11)",
+      line: { width: 0 },
+      layer: "below"
+    },
+    ...midnightLines,
+    {
+      type: "line",
+      xref: "x",
+      yref: "paper",
+      x0: forecastStartX,
+      x1: forecastStartX,
+      y0: 0,
+      y1: 1,
+      line: { color: "#5f7387", width: 1.2, dash: "dash" }
+    }
+  ];
+}
+
+function parseChartXDate(value) {
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? new Date(value.getTime()) : null;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+  if (typeof value === "string") {
+    const normalized = value.length === 10 ? `${value}T00:00:00` : value;
+    const d = new Date(normalized);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+  return null;
+}
+
+function getNoonTickAnchor(xRange) {
+  if (!Array.isArray(xRange) || xRange.length < 2) {
+    return null;
+  }
+  const start = parseChartXDate(xRange[0]);
+  if (!start) {
+    return null;
+  }
+  const noon = new Date(start);
+  noon.setHours(12, 0, 0, 0);
+  return fmtDateTimeLocal(noon);
+}
+
+function getXAxisStepDays() {
+  return getSelectedHistoryRange() === "season" ? SEASON_TICK_STEP_DAYS : 1;
+}
+
+function alignDateToWeekdayOnOrAfter(dateObj, weekday) {
+  const aligned = new Date(dateObj);
+  const delta = (weekday - aligned.getDay() + 7) % 7;
+  aligned.setDate(aligned.getDate() + delta);
+  return aligned;
+}
+
+function getPreferredSeasonTickWeekday() {
+  return new Date().getDay();
+}
+
+function buildNoonTickValues(xRange) {
+  if (!Array.isArray(xRange) || xRange.length < 2) {
+    return [];
+  }
+  const start = parseChartXDate(xRange[0]);
+  const end = parseChartXDate(xRange[1]);
+  if (!start || !end || end < start) {
+    return [];
+  }
+  const firstNoon = new Date(start);
+  firstNoon.setHours(12, 0, 0, 0);
+  if (firstNoon < start) {
+    firstNoon.setDate(firstNoon.getDate() + 1);
+  }
+  const values = [];
+  const stepDays = getXAxisStepDays();
+  const tickStart =
+    stepDays > 1 ? alignDateToWeekdayOnOrAfter(firstNoon, getPreferredSeasonTickWeekday()) : new Date(firstNoon);
+  for (let cursor = tickStart; cursor <= end; cursor.setDate(cursor.getDate() + stepDays)) {
+    values.push(fmtDateTimeLocal(cursor));
+  }
+  return values;
+}
+
+function formatNoYearDateLabel(value) {
+  const d = parseChartXDate(value);
+  if (!d) {
+    return "";
+  }
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  if (getSelectedHistoryRange() === "season") {
+    return `${month}/${day}`;
+  }
+  const weekday = ["Su", "M", "Tu", "W", "Th", "F", "Sa"][d.getDay()] || "";
+  return `${month}/${day}<br>${weekday}`;
+}
+
+function buildNoonTickAxisConfig(xRange) {
+  const tickvals = buildNoonTickValues(xRange);
+  const ticktext = tickvals.map((v) => formatNoYearDateLabel(v));
+  if (!tickvals.length) {
+    const tick0 = getNoonTickAnchor(xRange);
+    const stepDays = getXAxisStepDays();
+    return {
+      type: "date",
+      tickmode: "linear",
+      dtick: stepDays * 24 * 60 * 60 * 1000,
+      tick0: tick0 || undefined,
+      tickformat: "%-m/%-d",
+      showgrid: false
+    };
+  }
+  return {
+    type: "date",
+    tickmode: "array",
+    tickvals,
+    ticktext,
+    showgrid: false
+  };
+}
+
+function buildMidnightGuideShapes(xRange) {
+  if (!Array.isArray(xRange) || xRange.length < 2) {
+    return [];
+  }
+  const start = parseChartXDate(xRange[0]);
+  const end = parseChartXDate(xRange[1]);
+  if (!start || !end || end < start) {
+    return [];
+  }
+
+  const firstMidnight = new Date(start);
+  firstMidnight.setHours(0, 0, 0, 0);
+  if (firstMidnight < start) {
+    firstMidnight.setDate(firstMidnight.getDate() + 1);
+  }
+
+  const lines = [];
+  const stepDays = getXAxisStepDays();
+  const lineStart =
+    stepDays > 1 ? alignDateToWeekdayOnOrAfter(firstMidnight, getPreferredSeasonTickWeekday()) : new Date(firstMidnight);
+  for (let cursor = lineStart; cursor <= end; cursor.setDate(cursor.getDate() + stepDays)) {
+    const x = fmtDateTimeLocal(cursor);
+    lines.push({
+      type: "line",
+      xref: "x",
+      yref: "paper",
+      x0: x,
+      x1: x,
+      y0: 0,
+      y1: 1,
+      line: { color: "#e4ebf2", width: 1 },
+      layer: "below"
+    });
+  }
+  return lines;
+}
+
 function parseDayKey(dayKey) {
   const d = new Date(`${dayKey}T00:00:00`);
   return Number.isFinite(d.getTime()) ? d : null;
@@ -704,6 +1262,19 @@ function addDaysToDayKey(dayKey, days) {
   }
   d.setDate(d.getDate() + days);
   return fmtDateLocal(d);
+}
+
+function addHoursToHourKey(hourKey, hours) {
+  const d = parseChartXDate(hourKey);
+  if (!d || !Number.isFinite(hours)) {
+    return hourKey;
+  }
+  d.setHours(d.getHours() + hours);
+  return fmtDateTimeLocal(d);
+}
+
+function dayKeyToNoonIso(dayKey) {
+  return `${dayKey}T12:00`;
 }
 
 function dayKeyFromXValue(xVal) {
@@ -722,27 +1293,10 @@ function dayKeyFromXValue(xVal) {
   return null;
 }
 
-function buildDayHighlightShape(chartId, dayKey) {
-  let x0;
-  let x1;
-
-  if (DAILY_X_CHART_IDS.has(chartId)) {
-    const center = parseDayKey(dayKey);
-    if (center) {
-      const start = new Date(center.getTime() - 12 * 60 * 60 * 1000);
-      const end = new Date(center.getTime() + 12 * 60 * 60 * 1000);
-      x0 = fmtDateTimeLocal(start);
-      x1 = fmtDateTimeLocal(end);
-    } else {
-      const nextDay = addDaysToDayKey(dayKey, 1);
-      x0 = dayKey;
-      x1 = nextDay;
-    }
-  } else {
-    const nextDay = addDaysToDayKey(dayKey, 1);
-    x0 = `${dayKey}T00:00`;
-    x1 = `${nextDay}T00:00`;
-  }
+function buildDayHighlightShape(_chartId, dayKey) {
+  const nextDay = addDaysToDayKey(dayKey, 1);
+  const x0 = `${dayKey}T00:00`;
+  const x1 = `${nextDay}T00:00`;
 
   return {
     type: "rect",
@@ -786,6 +1340,51 @@ function clearLinkedHoverDay() {
   }
 }
 
+function cancelHoverClearTimer() {
+  if (clearHoverTimer) {
+    clearTimeout(clearHoverTimer);
+    clearHoverTimer = null;
+  }
+}
+
+function scheduleHoverClear() {
+  cancelHoverClearTimer();
+  clearHoverTimer = setTimeout(() => {
+    clearLinkedHoverDay();
+  }, 90);
+}
+
+function getDayKeyFromPointerPosition(chartEl, clientX, clientY) {
+  const fullLayout = chartEl?._fullLayout;
+  const size = fullLayout?._size;
+  const xaxis = fullLayout?.xaxis;
+  if (!fullLayout || !size || !xaxis || !Array.isArray(xaxis.range) || xaxis.range.length < 2) {
+    return null;
+  }
+
+  const rect = chartEl.getBoundingClientRect();
+  const xPx = clientX - rect.left - size.l;
+  const yPx = clientY - rect.top - size.t;
+  if (xPx < 0 || xPx > size.w || yPx < 0 || yPx > size.h || size.w <= 0) {
+    return null;
+  }
+
+  const start = parseChartXDate(xaxis.range[0]);
+  const end = parseChartXDate(xaxis.range[1]);
+  if (!start || !end) {
+    return null;
+  }
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return null;
+  }
+
+  const ratio = clamp(xPx / size.w, 0, 1);
+  const xMs = startMs + (endMs - startMs) * ratio;
+  return dayKeyFromXValue(xMs);
+}
+
 function setupLinkedHoverHandlers() {
   for (const chartId of LINKED_CHART_IDS) {
     const chartEl = document.getElementById(chartId);
@@ -793,24 +1392,29 @@ function setupLinkedHoverHandlers() {
       continue;
     }
 
-    chartEl.on("plotly_hover", (event) => {
-      if (clearHoverTimer) {
-        clearTimeout(clearHoverTimer);
-        clearHoverTimer = null;
+    chartEl.addEventListener("mousemove", (event) => {
+      const dayKey = getDayKeyFromPointerPosition(chartEl, event.clientX, event.clientY);
+      if (!dayKey) {
+        scheduleHoverClear();
+        return;
       }
+      cancelHoverClearTimer();
+      applyLinkedHoverDay(dayKey);
+    });
 
+    chartEl.addEventListener("mouseleave", () => {
+      scheduleHoverClear();
+    });
+
+    chartEl.on("plotly_hover", (event) => {
+      cancelHoverClearTimer();
       const xVal = event?.points?.[0]?.x;
       const dayKey = dayKeyFromXValue(xVal);
       applyLinkedHoverDay(dayKey);
     });
 
     chartEl.on("plotly_unhover", () => {
-      if (clearHoverTimer) {
-        clearTimeout(clearHoverTimer);
-      }
-      clearHoverTimer = setTimeout(() => {
-        clearLinkedHoverDay();
-      }, 90);
+      scheduleHoverClear();
     });
 
     chartEl.dataset.linkedHoverBound = "1";
@@ -871,10 +1475,19 @@ function buildForward7dUrl(lat, lon) {
   const base = new URL("https://api.open-meteo.com/v1/forecast");
   base.searchParams.set("latitude", String(lat));
   base.searchParams.set("longitude", String(lon));
-  base.searchParams.set("forecast_days", "8");
+  base.searchParams.set("forecast_days", String(FORECAST_WINDOW_DAYS + 1));
   base.searchParams.set(
     "hourly",
-    ["temperature_2m", "snowfall", "rain", "precipitation", "wind_speed_10m", "freezing_level_height"].join(",")
+    [
+      "temperature_2m",
+      "snowfall",
+      "rain",
+      "precipitation",
+      "wind_speed_10m",
+      "shortwave_radiation",
+      "snow_depth",
+      "freezing_level_height"
+    ].join(",")
   );
   base.searchParams.set(
     "current",
@@ -1468,6 +2081,16 @@ function splitHourlyPrecipPhase(record) {
   return { rain_lwe_in: 0, snow_lwe_in: 0, total_lwe_in: 0 };
 }
 
+function computeDailyFluffFactor(snowfallIn, snowLweIn) {
+  if (!Number.isFinite(snowfallIn) || snowfallIn <= 0.05) {
+    return null;
+  }
+  if (!Number.isFinite(snowLweIn) || snowLweIn <= 0.01) {
+    return null;
+  }
+  return snowfallIn / snowLweIn;
+}
+
 function aggregateDaily(hourlyRecords) {
   const byDay = new Map();
 
@@ -1536,6 +2159,7 @@ function aggregateDaily(hourlyRecords) {
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((d) => {
       const sunBakeIndex = computeSunBakeIndex(d.shortwave_mj_m2_sum, d.temp_max_f, d.thaw_hours);
+      const fluffFactor = computeDailyFluffFactor(d.snowfall_in_sum, d.snow_lwe_in_sum);
 
       return {
         date: d.date,
@@ -1553,7 +2177,8 @@ function aggregateDaily(hourlyRecords) {
         shortwave_mj_m2_sum: Number(d.shortwave_mj_m2_sum.toFixed(2)),
         snow_depth_end_in: d.snow_depth_end_in === null ? null : Number(d.snow_depth_end_in.toFixed(2)),
         snow_depth_max_in: d.snow_depth_max_in === null ? null : Number(d.snow_depth_max_in.toFixed(2)),
-        sun_bake_index: sunBakeIndex
+        sun_bake_index: sunBakeIndex,
+        fluff_factor: fluffFactor === null ? null : Number(fluffFactor.toFixed(2))
       };
     });
 }
@@ -1561,6 +2186,8 @@ function aggregateDaily(hourlyRecords) {
 function derivePowderScores(dailyRecords) {
   let lastSnowIdx = null;
   return dailyRecords.map((d, idx) => {
+    const prev1 = idx > 0 ? dailyRecords[idx - 1] : null;
+    const prev2 = idx > 1 ? dailyRecords[idx - 2] : null;
     const snow0 = Math.max(0, d.snowfall_in_sum || 0);
     const snow1 = idx > 0 ? Math.max(0, dailyRecords[idx - 1].snowfall_in_sum || 0) : 0;
     const snow2 = idx > 1 ? Math.max(0, dailyRecords[idx - 2].snowfall_in_sum || 0) : 0;
@@ -1576,46 +2203,70 @@ function derivePowderScores(dailyRecords) {
     const daysSinceSnow = lastSnowIdx === null ? 30 : idx - lastSnowIdx;
     const recentSnowWeighted = snow0 + snow1 * 0.65 + snow2 * 0.4 + snow3 * 0.2;
     const recentSnowLweWeighted = snowLwe0 + snowLwe1 * 0.65 + snowLwe2 * 0.4 + snowLwe3 * 0.2;
-    const freshBoost = clamp(recentSnowWeighted / 9, 0, 1) * 60;
+    const freshBoost = clamp(recentSnowWeighted / 9, 0, 1) * 58;
 
-    const tempMax = d.temp_max_f === null ? 28 : d.temp_max_f;
-    const thawHours = d.thaw_hours || 0;
-    const tempWarmFactor = clamp((tempMax - 32) / 14, 0, 1);
-    const thawFactor = clamp(thawHours / 10, 0, 1);
-    const thawPenalty = (0.55 * tempWarmFactor + 0.45 * thawFactor) * 24;
+    const tempMax0 = d.temp_max_f === null ? 28 : d.temp_max_f;
+    const tempMax1 = prev1?.temp_max_f === null || prev1?.temp_max_f === undefined ? tempMax0 : prev1.temp_max_f;
+    const tempMax2 = prev2?.temp_max_f === null || prev2?.temp_max_f === undefined ? tempMax1 : prev2.temp_max_f;
+    const warmTempWeighted = tempMax0 * 0.55 + tempMax1 * 0.3 + tempMax2 * 0.15;
+    const thawHours0 = d.thaw_hours || 0;
+    const thawHours1 = prev1?.thaw_hours || 0;
+    const thawHours2 = prev2?.thaw_hours || 0;
+    const thawHoursWeighted = thawHours0 + thawHours1 * 0.45 + thawHours2 * 0.2;
+    const tempWarmFactor = clamp((warmTempWeighted - 32) / 14, 0, 1);
+    const thawFactor = clamp(thawHoursWeighted / 12, 0, 1);
+    const thawPenalty = (0.6 * tempWarmFactor + 0.4 * thawFactor) * 24;
 
     const rainIn = Math.max(0, d.rain_raw_in_sum || 0);
-    const rainPenalty = clamp(rainIn / 0.35, 0, 1) * 56;
+    const rainPrev1 = Math.max(0, prev1?.rain_raw_in_sum || 0);
+    const rainPrev2 = Math.max(0, prev2?.rain_raw_in_sum || 0);
+    const recentRainWeighted = rainIn + rainPrev1 * 0.65 + rainPrev2 * 0.35;
+    const rainPenalty = clamp(recentRainWeighted / 0.45, 0, 1) * 56;
 
     const sunMj = Math.max(0, d.shortwave_mj_m2_sum || 0);
-    const sunFactor = clamp(sunMj / 22, 0, 1);
-    const sunTempFactor = clamp((tempMax - 30) / 10, 0, 1);
+    const sunPrev1 = Math.max(0, prev1?.shortwave_mj_m2_sum || 0);
+    const sunWeighted = sunMj + sunPrev1 * 0.55;
+    const sunFactor = clamp(sunWeighted / 24, 0, 1);
+    const sunTempFactor = clamp((warmTempWeighted - 30) / 10, 0, 1);
     const sunPenalty = sunFactor * (0.4 + 0.6 * sunTempFactor) * 18;
 
     const windMax = Math.max(0, d.wind_max_mph || 0);
-    const windBasePenalty = clamp((windMax - 15) / 35, 0, 1) * 14;
+    const windPrev1 = Math.max(0, prev1?.wind_max_mph || 0);
+    const windWeighted = windMax + windPrev1 * 0.5;
+    const windBasePenalty = clamp((windWeighted - 15) / 35, 0, 1) * 14;
     const windPenalty = recentSnowWeighted > 2 ? windBasePenalty * 1.25 : windBasePenalty;
 
     const densityLwePerIn =
       recentSnowWeighted >= 0.25 && recentSnowLweWeighted > 0 ? recentSnowLweWeighted / recentSnowWeighted : null;
-    const densityPenalty =
-      densityLwePerIn === null
+    const recentFluffRatio = densityLwePerIn !== null && densityLwePerIn > 0 ? 1 / densityLwePerIn : null;
+    const dailyFluffRatio = Number.isFinite(d.fluff_factor) ? d.fluff_factor : null;
+    const fluffRatioForScore = dailyFluffRatio ?? recentFluffRatio;
+    const denseSnowPenalty =
+      fluffRatioForScore === null
         ? 0
-        : densityLwePerIn <= 0.04
-        ? clamp((0.04 - densityLwePerIn) / 0.02, 0, 1) * 4
-        : densityLwePerIn <= 0.09
+        : fluffRatioForScore >= 9
         ? 0
-        : densityLwePerIn <= 0.14
-        ? clamp((densityLwePerIn - 0.09) / 0.05, 0, 1) * 12
-        : 12 + clamp((densityLwePerIn - 0.14) / 0.08, 0, 1) * 12;
+        : fluffRatioForScore >= 6
+        ? clamp((9 - fluffRatioForScore) / 3, 0, 1) * 8
+        : 8 + clamp((6 - fluffRatioForScore) / 3, 0, 1) * 12;
+    const fluffBonus =
+      recentSnowWeighted < 0.5 || fluffRatioForScore === null
+        ? 0
+        : fluffRatioForScore <= 10
+        ? 0
+        : fluffRatioForScore <= 15
+        ? clamp((fluffRatioForScore - 10) / 5, 0, 1) * 8
+        : fluffRatioForScore <= 20
+        ? 8 + clamp((fluffRatioForScore - 15) / 5, 0, 1) * 8
+        : 16 + clamp((fluffRatioForScore - 20) / 8, 0, 1) * 4;
 
     const agePenalty = clamp((daysSinceSnow - 1) / 6, 0, 1) * 22;
 
-    const coldFactor = clamp((35 - tempMax) / 10, 0, 1);
-    const dryFactor = clamp(1 - rainIn / 0.08, 0, 1);
-    const lowSunFactor = clamp(1 - sunMj / 16, 0, 1);
-    const lightWindFactor = clamp(1 - Math.max(0, windMax - 10) / 25, 0, 1);
-    const lowDensityFactor = densityLwePerIn === null ? 0.5 : clamp((0.11 - densityLwePerIn) / 0.07, 0, 1);
+    const coldFactor = clamp((35 - warmTempWeighted) / 10, 0, 1);
+    const dryFactor = clamp(1 - recentRainWeighted / 0.12, 0, 1);
+    const lowSunFactor = clamp(1 - sunWeighted / 20, 0, 1);
+    const lightWindFactor = clamp(1 - Math.max(0, windWeighted - 10) / 25, 0, 1);
+    const fluffQualityFactor = fluffRatioForScore === null ? 0.5 : clamp((fluffRatioForScore - 7) / 10, 0, 1);
     const freshFactor = clamp(recentSnowWeighted / 8, 0, 1);
     const qualityBonus =
       recentSnowWeighted < 0.5
@@ -1625,7 +2276,7 @@ function derivePowderScores(dailyRecords) {
             0.16 * dryFactor +
             0.1 * lowSunFactor +
             0.08 * lightWindFactor +
-            0.08 * lowDensityFactor) *
+            0.08 * fluffQualityFactor) *
           14;
 
     const snowDepth = d.snow_depth_end_in ?? d.snow_depth_max_in ?? 0;
@@ -1640,8 +2291,9 @@ function derivePowderScores(dailyRecords) {
       rainPenalty -
       sunPenalty -
       windPenalty -
-      densityPenalty -
-      coveragePenalty;
+      denseSnowPenalty -
+      coveragePenalty +
+      fluffBonus;
     const powderScore = Math.round(clamp(rawScore, 0, 100));
 
     return {
@@ -1654,8 +2306,11 @@ function derivePowderScores(dailyRecords) {
       powder_sun_penalty: Number(sunPenalty.toFixed(1)),
       powder_wind_penalty: Number(windPenalty.toFixed(1)),
       powder_density_lwe_per_in: densityLwePerIn === null ? null : Number(densityLwePerIn.toFixed(3)),
-      powder_density_penalty: Number(densityPenalty.toFixed(1)),
-      powder_quality_bonus: Number(qualityBonus.toFixed(1))
+      powder_density_penalty: Number(denseSnowPenalty.toFixed(1)),
+      powder_quality_bonus: Number(qualityBonus.toFixed(1)),
+      powder_fluff_ratio: fluffRatioForScore === null ? null : Number(fluffRatioForScore.toFixed(1)),
+      powder_fluff_bonus: Number(fluffBonus.toFixed(1)),
+      powder_fluff_penalty: Number(denseSnowPenalty.toFixed(1))
     };
   });
 }
@@ -1702,7 +2357,7 @@ function analyzeDailyRules(dailyRecords) {
         date: d.date,
         type: "rain",
         title: crustPotential ? "Rain-on-snow with crust potential" : "Rain-on-snow",
-        detail: `Daily rain ${d.rain_raw_in_sum} in from hourly.rain.`
+        detail: `Daily rain ${formatLengthFromIn(d.rain_raw_in_sum, 2)} from hourly.rain.`
       });
     }
 
@@ -1719,7 +2374,7 @@ function analyzeDailyRules(dailyRecords) {
         date: d.date,
         type: "wind",
         title: "Wind slab risk window",
-        detail: `Max wind ${d.wind_max_mph} mph with ${Number(recentSnowfallTotal.toFixed(1))} in snowfall in the last ${THRESHOLDS.windRecentSnowDays} days.`
+        detail: `Max wind ${d.wind_max_mph} mph with ${formatLengthFromIn(recentSnowfallTotal, 1)} snowfall in the last ${THRESHOLDS.windRecentSnowDays} days.`
       });
     }
 
@@ -2403,7 +3058,6 @@ function deriveChartSources(dataMode, metricSourceStats) {
   for (const chartId of CHART_IDS_WITH_SOURCE) {
     sourceByChart[chartId] = dataMode === "station" ? getChartSourceFromMetrics(metricSourceStats, chartId) : "model";
   }
-  sourceByChart["forecast-chart"] = "model";
   return sourceByChart;
 }
 
@@ -2713,6 +3367,7 @@ function renderStationCrossCheck(payload, modeInfo = {}) {
 }
 
 function renderSummary(hourlyRecords, dailyRecords, ruleMatches, forwardSummary) {
+  const displayLengthUnit = getSelectedLengthUnit();
   const latestDepth = findLatestSnowDepth(hourlyRecords);
   const peakDepth = findPeakSnowDepth(dailyRecords);
   const delta7d = findSnowDepthChange7d(dailyRecords);
@@ -2730,20 +3385,20 @@ function renderSummary(hourlyRecords, dailyRecords, ruleMatches, forwardSummary)
   const forwardCards = forwardSummary
     ? [
         {
-          label: "Next 7d Snow",
-          value: `${forwardSummary.snow_total_in.toFixed(1)} in`,
+          label: `Next ${FORECAST_WINDOW_DAYS}d Snow`,
+          value: formatLengthFromIn(forwardSummary.snow_total_in, 1, displayLengthUnit),
           sub:
             forwardSummary.start_time && forwardSummary.end_time
               ? `${forwardSummary.start_time} to ${forwardSummary.end_time}`
               : "Forward forecast window"
         },
         {
-          label: "Next 7d Rain",
-          value: `${forwardSummary.rain_total_in.toFixed(1)} in`,
+          label: `Next ${FORECAST_WINDOW_DAYS}d Rain`,
+          value: formatLengthFromIn(forwardSummary.rain_total_in, 1, displayLengthUnit),
           sub: `Freeze hours: ${forwardSummary.freeze_hours}`
         },
         {
-          label: "Next 7d Max Wind",
+          label: `Next ${FORECAST_WINDOW_DAYS}d Max Wind`,
           value: forwardSummary.max_wind_mph === null ? "n/a" : `${forwardSummary.max_wind_mph} mph`,
           sub:
             forwardSummary.min_temp_f === null || forwardSummary.max_temp_f === null
@@ -2756,12 +3411,15 @@ function renderSummary(hourlyRecords, dailyRecords, ruleMatches, forwardSummary)
   const cards = [
     {
       label: "Current Snowpack",
-      value: latestDepth === null ? "n/a" : `${latestDepth} in`,
-      sub: delta7d === null ? "7-day change unavailable" : `7-day change: ${delta7d >= 0 ? "+" : ""}${delta7d} in`
+      value: latestDepth === null ? "n/a" : formatLengthFromIn(latestDepth, 1, displayLengthUnit),
+      sub:
+        delta7d === null
+          ? "7-day change unavailable"
+          : `7-day change: ${formatSignedLengthFromIn(delta7d, 1, displayLengthUnit)}`
     },
     {
       label: "Peak Snowpack",
-      value: peakDepth ? `${peakDepth.depth} in` : "n/a",
+      value: peakDepth ? formatLengthFromIn(peakDepth.depth, 1, displayLengthUnit) : "n/a",
       sub: peakDepth ? `Peak date: ${peakDepth.date}` : "No peak depth in this dataset"
     },
     {
@@ -2775,7 +3433,7 @@ function renderSummary(hourlyRecords, dailyRecords, ruleMatches, forwardSummary)
     },
     {
       label: "Last 24h Snow",
-      value: snow24h === null ? "n/a" : `${snow24h.toFixed(1)} in`,
+      value: snow24h === null ? "n/a" : formatLengthFromIn(snow24h, 1, displayLengthUnit),
       sub:
         typeof hourlyRecords?.[hourlyRecords.length - 1]?.time === "string"
           ? `Rolling 24h ending ${hourlyRecords[hourlyRecords.length - 1].time}`
@@ -2857,9 +3515,10 @@ function renderEvents(events) {
     .join("");
 }
 
-function renderEventsTimeline(events, xRange) {
+function renderEventsTimeline(events, xRange, forecastStartX = null) {
   const traces = [];
   const categoryOrder = [];
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
 
   for (const [eventType, meta] of Object.entries(EVENT_TIMELINE_META)) {
     categoryOrder.push(meta.label);
@@ -2867,16 +3526,18 @@ function renderEventsTimeline(events, xRange) {
     if (!subset.length) {
       continue;
     }
+    const xValues = subset.map((e) => `${e.date}T12:00`);
+    const hoverTimes = buildHoverTimeLabels(xValues);
 
     traces.push({
-      x: subset.map((e) => e.date),
+      x: xValues,
       y: subset.map(() => meta.label),
       type: "scatter",
       mode: "markers",
       marker: { size: 9, color: meta.color, symbol: "circle" },
       name: meta.label,
-      customdata: subset.map((e) => [e.title, e.detail]),
-      hovertemplate: "Date %{x}<br>%{customdata[0]}<br>%{customdata[1]}<extra></extra>"
+      customdata: subset.map((e, index) => [e.title, e.detail, hoverTimes[index]]),
+      hovertemplate: "Time %{customdata[2]}<br>%{customdata[0]}<br>%{customdata[1]}<extra></extra>"
     });
   }
 
@@ -2886,9 +3547,7 @@ function renderEventsTimeline(events, xRange) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       type: "category",
@@ -2897,6 +3556,7 @@ function renderEventsTimeline(events, xRange) {
       showgrid: true,
       gridcolor: "#edf2f7"
     },
+    shapes: forecastShapes,
     showlegend: false,
     annotations: traces.length
       ? []
@@ -2913,7 +3573,7 @@ function renderEventsTimeline(events, xRange) {
         ]
   };
 
-  setBaseShapes("events-timeline-chart", []);
+  setBaseShapes("events-timeline-chart", forecastShapes);
   Plotly.react("events-timeline-chart", traces, layout, getPlotConfig());
 }
 
@@ -2998,8 +3658,11 @@ function buildSplitFreezingLevelSeries(hourlyRecords, locationElevationFt) {
   return buildSplitSeriesByThreshold(hourlyRecords, (r) => r.freezing_level_ft, locationElevationFt);
 }
 
-function renderTemperatureChart(hourlyRecords, xRange) {
+function renderTemperatureChart(hourlyRecords, xRange, forecastStartX = null) {
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
   const split = buildSplitTemperatureSeries(hourlyRecords);
+  const blueHoverTimes = buildHoverTimeLabels(split.blue.x);
+  const redHoverTimes = buildHoverTimeLabels(split.red.x);
   const freezeLineShape = {
     type: "line",
     xref: "x",
@@ -3015,51 +3678,60 @@ function renderTemperatureChart(hourlyRecords, xRange) {
     {
       x: split.blue.x,
       y: split.blue.y,
+      customdata: blueHoverTimes,
       mode: "lines",
       line: { color: "#2f86eb", width: 1.5 },
-      name: "<= 32F"
+      name: "<= 32F",
+      hovertemplate: "Time %{customdata}<br>Temperature %{y:.1f} F<extra></extra>"
     },
     {
       x: split.red.x,
       y: split.red.y,
+      customdata: redHoverTimes,
       mode: "lines",
       line: { color: "#d94b45", width: 1.5 },
-      name: "> 32F"
+      name: "> 32F",
+      hovertemplate: "Time %{customdata}<br>Temperature %{y:.1f} F<extra></extra>"
     }
   ];
 
+  const shapes = [...forecastShapes, freezeLineShape];
   const layout = {
     margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
     paper_bgcolor: "#ffffff",
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Time"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       title: "Temperature (F)",
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
-    shapes: [freezeLineShape],
-    legend: { orientation: "h", y: 1.1, x: 0 }
+    shapes,
+    showlegend: false
   };
 
-  setBaseShapes("temperature-chart", [freezeLineShape]);
+  setBaseShapes("temperature-chart", shapes);
   Plotly.react("temperature-chart", data, layout, getPlotConfig());
 }
 
-function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt) {
+function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt, forecastStartX = null) {
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
   const validElevation = Number.isFinite(locationElevationFt) ? locationElevationFt : null;
   const split =
     validElevation === null ? { blue: { x: [], y: [] }, red: { x: [], y: [] } } : buildSplitFreezingLevelSeries(hourlyRecords, validElevation);
 
   const x = hourlyRecords.map((r) => r.time);
   const y = hourlyRecords.map((r) => r.freezing_level_ft);
+  const hoverTimes = buildHoverTimeLabels(x);
+  const blueHoverTimes = buildHoverTimeLabels(split.blue.x);
+  const redHoverTimes = buildHoverTimeLabels(split.red.x);
   const hasData = y.some((v) => Number.isFinite(v));
-  const shapes = [];
+  const overflowRaw = y.map((v) => (Number.isFinite(v) && v > FREEZING_LEVEL_MAX_FT ? v : null));
+  const hasOverflow = overflowRaw.some((v) => Number.isFinite(v));
+  const shapes = [...forecastShapes];
 
   if (validElevation !== null) {
     shapes.push({
@@ -3080,30 +3752,75 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt) {
           {
             x,
             y,
+            customdata: hoverTimes,
             mode: "lines",
             line: { color: "#597a95", width: 1.4 },
             name: "Freezing Elev. (ft)",
-            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+          },
+          {
+            x,
+            y: overflowRaw.map((v) => (Number.isFinite(v) ? FREEZING_LEVEL_MAX_FT : null)),
+            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+            mode: "lines",
+            line: { color: "#597a95", width: 1.4, dash: "dot" },
+            name: `Above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft`,
+            showlegend: false,
+            hovertemplate:
+              `Time %{customdata[0]}<br>` +
+              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
           }
         ]
       : [
           {
             x: split.blue.x,
             y: split.blue.y,
+            customdata: blueHoverTimes,
             mode: "lines",
             line: { color: "#2f86eb", width: 1.5 },
             name: "Below site elev",
-            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
           },
           {
             x: split.red.x,
             y: split.red.y,
+            customdata: redHoverTimes,
             mode: "lines",
             line: { color: "#d94b45", width: 1.5 },
             name: "Above site elev",
-            hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+          },
+          {
+            x,
+            y: overflowRaw.map((v) =>
+              Number.isFinite(v) && v <= validElevation ? FREEZING_LEVEL_MAX_FT : null
+            ),
+            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+            mode: "lines",
+            line: { color: "#2f86eb", width: 1.4, dash: "dot" },
+            name: `> ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft (below site elev)`,
+            showlegend: false,
+            hovertemplate:
+              `Time %{customdata[0]}<br>` +
+              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
+          },
+          {
+            x,
+            y: overflowRaw.map((v) =>
+              Number.isFinite(v) && v > validElevation ? FREEZING_LEVEL_MAX_FT : null
+            ),
+            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+            mode: "lines",
+            line: { color: "#d94b45", width: 1.4, dash: "dot" },
+            name: `> ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft (above site elev)`,
+            showlegend: false,
+            hovertemplate:
+              `Time %{customdata[0]}<br>` +
+              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
           }
         ];
+
+  const filteredData = hasOverflow ? data : data.filter((trace, idx) => (validElevation === null ? idx === 0 : idx <= 1));
 
   const layout = {
     margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
@@ -3111,15 +3828,13 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Time"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       title: "Freezing Elevation (ft)",
       showgrid: true,
       gridcolor: "#e4ebf2",
-      rangemode: "tozero"
+      range: [FREEZING_LEVEL_MIN_FT, FREEZING_LEVEL_MAX_FT]
     },
     shapes,
     annotations: hasData
@@ -3135,36 +3850,42 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt) {
             font: { size: 12, color: "#617484" }
           }
         ],
-    legend: { orientation: "h", y: 1.1, x: 0 }
+    showlegend: false
   };
 
   setBaseShapes("freezing-level-chart", shapes);
-  Plotly.react("freezing-level-chart", data, layout, getPlotConfig());
+  Plotly.react("freezing-level-chart", filteredData, layout, getPlotConfig());
 }
 
-function renderPrecipChart(dailyRecords, xRange) {
-  const x = dailyRecords.map((d) => d.date);
-  const snowDepth = dailyRecords.map((d) => d.snowfall_in_sum);
-  const rainDepth = dailyRecords.map((d) => d.rain_raw_in_sum);
+function renderPrecipChart(dailyRecords, xRange, forecastStartX = null) {
+  const displayLengthUnit = getSelectedLengthUnit();
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
+  const snowDepth = dailyRecords.map((d) => convertLengthInToDisplay(d.snowfall_in_sum, displayLengthUnit));
+  const rainDepth = dailyRecords.map((d) => convertLengthInToDisplay(d.rain_raw_in_sum, displayLengthUnit));
 
   const data = [
     {
       x,
       y: snowDepth,
+      customdata: hoverTimes,
       type: "bar",
       yaxis: "y1",
       marker: { color: "rgba(52, 136, 243, 0.9)" },
-      name: "Snow (in/day)",
-      hovertemplate: "Date %{x}<br>Snow %{y:.1f} in/day<extra></extra>"
+      name: `Snow (${displayLengthUnit}/day)`,
+      hovertemplate: `Time %{customdata}<br>Snow %{y:.1f} ${displayLengthUnit}/day<extra></extra>`
     },
     {
       x,
       y: rainDepth,
+      customdata: hoverTimes,
       type: "bar",
       yaxis: "y1",
       marker: { color: "rgba(119, 26, 30, 0.92)" },
-      name: "Rain (in/day)",
-      hovertemplate: "Date %{x}<br>Rain %{y:.1f} in/day<extra></extra>"
+      name: `Rain (${displayLengthUnit}/day)`,
+      hovertemplate: `Time %{customdata}<br>Rain %{y:.1f} ${displayLengthUnit}/day<extra></extra>`
     }
   ];
 
@@ -3175,21 +3896,97 @@ function renderPrecipChart(dailyRecords, xRange) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
-      title: "Snow/Rain Depth (in/day)",
+      title: `Snow/Rain Depth (${displayLengthUnit}/day)`,
       rangemode: "tozero",
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
-    legend: { orientation: "h", y: 1.1, x: 0 }
+    shapes: forecastShapes,
+    showlegend: false
   };
 
-  setBaseShapes("precip-chart", []);
+  setBaseShapes("precip-chart", forecastShapes);
   Plotly.react("precip-chart", data, layout, getPlotConfig());
+}
+
+function renderFluffChart(dailyRecords, xRange, forecastStartX = null) {
+  const displayLengthUnit = getSelectedLengthUnit();
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
+  const snowDepth = dailyRecords.map((d) => convertLengthInToDisplay(d.snowfall_in_sum, displayLengthUnit));
+  const snowSwe = dailyRecords.map((d) => convertLengthInToDisplay(d.snow_lwe_in_sum, displayLengthUnit));
+  const fluffFactor = dailyRecords.map((d) =>
+    d.snowfall_in_sum > 0 && Number.isFinite(d.fluff_factor) ? d.fluff_factor : null
+  );
+  const finiteFluff = fluffFactor.filter((v) => Number.isFinite(v));
+  const fluffPeak = finiteFluff.length ? Math.max(...finiteFluff) : 0;
+  const yAxisMax = finiteFluff.length ? Math.min(40, Math.max(12, Math.ceil((fluffPeak + 1) / 2) * 2)) : 12;
+  const refShape = {
+    type: "line",
+    xref: "x",
+    yref: "y",
+    x0: xRange[0],
+    x1: xRange[1],
+    y0: 10,
+    y1: 10,
+    line: { color: "#758398", width: 1, dash: "dot" }
+  };
+  const shapes = [...forecastShapes, refShape];
+
+  const data = [
+    {
+      x,
+      y: fluffFactor,
+      customdata: hoverTimes.map((timeLabel, idx) => [timeLabel, snowDepth[idx], snowSwe[idx]]),
+      type: "bar",
+      marker: { color: "rgba(90, 101, 191, 0.88)" },
+      name: "Fluff factor (x:1)",
+      hovertemplate:
+        "Time %{customdata[0]}<br>" +
+        "Fluff %{y:.1f}:1<br>" +
+        `Snow %{customdata[1]:.1f} ${displayLengthUnit}, SWE %{customdata[2]:.2f} ${displayLengthUnit}<extra></extra>`
+    }
+  ];
+
+  const layout = {
+    barmode: "overlay",
+    margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
+    paper_bgcolor: "#ffffff",
+    plot_bgcolor: "#ffffff",
+    xaxis: {
+      range: xRange,
+      ...buildNoonTickAxisConfig(xRange)
+    },
+    yaxis: {
+      title: "Snow:SWE (x:1)",
+      range: [0, yAxisMax],
+      showgrid: true,
+      gridcolor: "#e4ebf2"
+    },
+    shapes,
+    annotations: finiteFluff.length
+      ? []
+      : [
+          {
+            x: 0.5,
+            y: 0.5,
+            xref: "paper",
+            yref: "paper",
+            text: "No snow-day fluff values in this range.",
+            showarrow: false,
+            font: { size: 12, color: "#617484" }
+          }
+        ],
+    showlegend: false
+  };
+
+  setBaseShapes("fluff-chart", shapes);
+  Plotly.react("fluff-chart", data, layout, getPlotConfig());
 }
 
 function powderBand(score) {
@@ -3211,42 +4008,12 @@ function powderBand(score) {
   return "Very Poor";
 }
 
-function renderPowderChart(dailyRecords, xRange) {
-  const x = dailyRecords.map((d) => d.date);
+function renderPowderChart(dailyRecords, xRange, forecastStartX = null) {
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
   const score = dailyRecords.map((d) => d.powder_score);
-  const recentSnow = dailyRecords.map((d) => d.powder_recent_snow_in);
-  const daysSinceSnow = dailyRecords.map((d) => d.powder_days_since_snow);
-  const rainPenalty = dailyRecords.map((d) => d.powder_rain_penalty);
-  const thawPenalty = dailyRecords.map((d) => d.powder_thaw_penalty);
-  const sunPenalty = dailyRecords.map((d) => d.powder_sun_penalty);
-  const windPenalty = dailyRecords.map((d) => d.powder_wind_penalty);
-  const densityPenalty = dailyRecords.map((d) => d.powder_density_penalty);
-  const densityLwePerIn = dailyRecords.map((d) => d.powder_density_lwe_per_in);
-  const qualityBonus = dailyRecords.map((d) => d.powder_quality_bonus);
-  const bands = score.map((s) => powderBand(s));
-  const hoverRows = dailyRecords.map((d, i) => {
-    const windTxt = Number.isFinite(d.wind_max_mph) ? d.wind_max_mph.toFixed(1) : "n/a";
-    const thawHrs = Number.isFinite(d.thaw_hours) ? String(d.thaw_hours) : "0";
-    const rainTxt = Number.isFinite(d.rain_raw_in_sum) ? d.rain_raw_in_sum.toFixed(1) : "0.0";
-    const sunTxt = Number.isFinite(d.shortwave_mj_m2_sum) ? d.shortwave_mj_m2_sum.toFixed(1) : "0.0";
-    const densityTxt = Number.isFinite(densityLwePerIn[i]) ? densityLwePerIn[i].toFixed(3) : "n/a";
-    return [
-      bands[i],
-      recentSnow[i].toFixed(1),
-      String(daysSinceSnow[i]),
-      thawHrs,
-      rainTxt,
-      sunTxt,
-      windTxt,
-      densityTxt,
-      thawPenalty[i].toFixed(1),
-      rainPenalty[i].toFixed(1),
-      sunPenalty[i].toFixed(1),
-      windPenalty[i].toFixed(1),
-      densityPenalty[i].toFixed(1),
-      qualityBonus[i].toFixed(1)
-    ];
-  });
 
   const data = [
     {
@@ -3268,19 +4035,8 @@ function renderPowderChart(dailyRecords, xRange) {
           [1, "#2f6f43"]
         ]
       },
-      customdata: hoverRows,
-      hovertemplate:
-        "Date %{x}<br>" +
-        "Powder score %{y}/100 (%{customdata[0]})<br>" +
-        "Recent snow (weighted) %{customdata[1]} in<br>" +
-        "Days since fresh snow %{customdata[2]}<br>" +
-        "Thaw hours %{customdata[3]}<br>" +
-        "Rain %{customdata[4]} in/day<br>" +
-        "Sun %{customdata[5]} MJ/m^2/day<br>" +
-        "Max wind %{customdata[6]} mph<br>" +
-        "Snow density (LWE/in snow) %{customdata[7]}<br>" +
-        "Penalties T/R/S/W/D %{customdata[8]}/%{customdata[9]}/%{customdata[10]}/%{customdata[11]}/%{customdata[12]}<br>" +
-        "Quality bonus +%{customdata[13]}<extra></extra>",
+      customdata: hoverTimes,
+      hovertemplate: "Time %{customdata}<br>Powder score %{y:.0f}/100<extra></extra>",
       name: "Powder Score"
     }
   ];
@@ -3306,15 +4062,14 @@ function renderPowderChart(dailyRecords, xRange) {
     line: { color: "#4f8754", width: 1, dash: "dot" }
   };
 
+  const shapes = [...forecastShapes, refShape50, refShape80];
   const layout = {
     margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
     paper_bgcolor: "#ffffff",
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       title: "Powder Score (0-100)",
@@ -3322,19 +4077,22 @@ function renderPowderChart(dailyRecords, xRange) {
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
-    shapes: [refShape50, refShape80],
+    shapes,
     showlegend: false
   };
 
-  setBaseShapes("powder-chart", [refShape50, refShape80]);
+  setBaseShapes("powder-chart", shapes);
   Plotly.react("powder-chart", data, layout, getPlotConfig());
 }
 
-function renderSnowpackChart(dailyRecords, xRange) {
-  const x = dailyRecords.map((d) => d.date);
-  const depth = dailyRecords.map((d) => d.snow_depth_end_in);
-  const depthMax = dailyRecords.map((d) => d.snow_depth_max_in);
-  const finiteDepths = [...depth, ...depthMax].filter((v) => Number.isFinite(v));
+function renderSnowpackChart(dailyRecords, xRange, forecastStartX = null) {
+  const displayLengthUnit = getSelectedLengthUnit();
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
+  const depth = dailyRecords.map((d) => convertLengthInToDisplay(d.snow_depth_end_in, displayLengthUnit));
+  const finiteDepths = depth.filter((v) => Number.isFinite(v));
   const depthPeak = finiteDepths.length ? Math.max(...finiteDepths) : 0;
   const yAxisMax = depthPeak > 0 ? Number((depthPeak * 1.08 + 0.1).toFixed(2)) : 1;
 
@@ -3342,20 +4100,14 @@ function renderSnowpackChart(dailyRecords, xRange) {
     {
       x,
       y: depth,
+      customdata: hoverTimes,
       type: "scatter",
       mode: "lines",
       line: { color: "#255db3", width: 2.2 },
       fill: "tozeroy",
       fillcolor: "rgba(37,93,179,0.18)",
-      name: "End-of-day snow depth"
-    },
-    {
-      x,
-      y: depthMax,
-      type: "scatter",
-      mode: "lines",
-      line: { color: "#5f89c9", width: 1.3, dash: "dot" },
-      name: "Daily max snow depth"
+      name: "End-of-day snow depth",
+      hovertemplate: `Time %{customdata}<br>End-of-day depth %{y:.1f} ${displayLengthUnit}<extra></extra>`
     }
   ];
 
@@ -3365,25 +4117,27 @@ function renderSnowpackChart(dailyRecords, xRange) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
-      title: "Snow depth (in)",
+      title: `Snow depth (${displayLengthUnit})`,
       range: [0, yAxisMax],
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
-    legend: { orientation: "h", y: 1.1, x: 0 }
+    shapes: forecastShapes,
+    showlegend: false
   };
 
-  setBaseShapes("snowpack-chart", []);
+  setBaseShapes("snowpack-chart", forecastShapes);
   Plotly.react("snowpack-chart", data, layout, getPlotConfig());
 }
 
-function renderWindChart(dailyRecords, xRange) {
-  const x = dailyRecords.map((d) => d.date);
+function renderWindChart(dailyRecords, xRange, forecastStartX = null) {
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
   const avgWind = dailyRecords.map((d) => d.wind_avg_mph);
   const maxWind = dailyRecords.map((d) => d.wind_max_mph);
 
@@ -3391,18 +4145,22 @@ function renderWindChart(dailyRecords, xRange) {
     {
       x,
       y: avgWind,
+      customdata: hoverTimes,
       type: "scatter",
       mode: "lines",
       line: { color: "#267356", width: 2 },
-      name: "Avg Wind"
+      name: "Avg Wind",
+      hovertemplate: "Time %{customdata}<br>Avg wind %{y:.1f} mph<extra></extra>"
     },
     {
       x,
       y: maxWind,
+      customdata: hoverTimes,
       type: "scatter",
       mode: "lines",
       line: { color: "#66a96f", width: 2 },
-      name: "Max Wind"
+      name: "Max Wind",
+      hovertemplate: "Time %{customdata}<br>Max wind %{y:.1f} mph<extra></extra>"
     }
   ];
 
@@ -3412,9 +4170,7 @@ function renderWindChart(dailyRecords, xRange) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       title: "Wind (mph)",
@@ -3422,15 +4178,19 @@ function renderWindChart(dailyRecords, xRange) {
       showgrid: true,
       gridcolor: "#e4ebf2"
     },
-    legend: { orientation: "h", y: 1.1, x: 0 }
+    shapes: forecastShapes,
+    showlegend: false
   };
 
-  setBaseShapes("wind-chart", []);
+  setBaseShapes("wind-chart", forecastShapes);
   Plotly.react("wind-chart", data, layout, getPlotConfig());
 }
 
-function renderSunChart(dailyRecords, xRange) {
-  const x = dailyRecords.map((d) => d.date);
+function renderSunChart(dailyRecords, xRange, forecastStartX = null) {
+  const forecastShapes = buildForecastBoundaryShapes(xRange, forecastStartX);
+  const dayLabels = dailyRecords.map((d) => d.date);
+  const x = dayLabels.map((d) => dayKeyToNoonIso(d));
+  const hoverTimes = buildHoverTimeLabels(x);
   const sun = dailyRecords.map((d) => d.shortwave_mj_m2_sum);
   const sunIndex = dailyRecords.map((d) => d.sun_bake_index);
 
@@ -3438,21 +4198,25 @@ function renderSunChart(dailyRecords, xRange) {
     {
       x,
       y: sun,
+      customdata: hoverTimes,
       type: "scatter",
       mode: "lines",
       line: { color: "#e59d17", width: 2 },
       fill: "tozeroy",
       fillcolor: "rgba(229,157,23,0.2)",
-      name: "Shortwave MJ/m^2/day"
+      name: "Shortwave MJ/m^2/day",
+      hovertemplate: "Time %{customdata}<br>Shortwave %{y:.1f} MJ/m^2/day<extra></extra>"
     },
     {
       x,
       y: sunIndex,
+      customdata: hoverTimes,
       yaxis: "y2",
       type: "scatter",
       mode: "lines",
       line: { color: "#8a5a0f", width: 1.5, dash: "dot" },
-      name: "Sun-bake index (0-100)"
+      name: "Sun-bake index (0-100)",
+      hovertemplate: "Time %{customdata}<br>Sun-bake index %{y:.1f}<extra></extra>"
     }
   ];
 
@@ -3462,9 +4226,7 @@ function renderSunChart(dailyRecords, xRange) {
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Date"
+      ...buildNoonTickAxisConfig(xRange)
     },
     yaxis: {
       title: "Shortwave (MJ/m^2/day)",
@@ -3478,216 +4240,12 @@ function renderSunChart(dailyRecords, xRange) {
       side: "right",
       range: [0, 100]
     },
-    legend: { orientation: "h", y: 1.15, x: 0 }
+    shapes: forecastShapes,
+    showlegend: false
   };
 
-  setBaseShapes("sun-chart", []);
+  setBaseShapes("sun-chart", forecastShapes);
   Plotly.react("sun-chart", data, layout, getPlotConfig());
-}
-
-function renderForwardChart(forwardHourlyRecords) {
-  const emptyLayout = {
-    margin: { l: PLOT_LEFT_MARGIN, r: 88, t: 10, b: 36 },
-    paper_bgcolor: "#ffffff",
-    plot_bgcolor: "#ffffff",
-    xaxis: {
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Time"
-    },
-    yaxis: {
-      title: "Temperature (F)",
-      showgrid: true,
-      gridcolor: "#e4ebf2"
-    },
-    annotations: [
-      {
-        x: 0.5,
-        y: 0.5,
-        xref: "paper",
-        yref: "paper",
-        text: "Forward 7d forecast unavailable.",
-        showarrow: false,
-        font: { size: 12, color: "#617484" }
-      }
-    ]
-  };
-
-  if (!Array.isArray(forwardHourlyRecords) || !forwardHourlyRecords.length) {
-    setBaseShapes("forecast-chart", []);
-    Plotly.react("forecast-chart", [], emptyLayout, getPlotConfig());
-    return;
-  }
-
-  const split = buildSplitTemperatureSeries(forwardHourlyRecords);
-  const x = forwardHourlyRecords.map((r) => r.time);
-  const snow = forwardHourlyRecords.map((r) => Math.max(0, r.snowfall_in ?? 0));
-  const rain = forwardHourlyRecords.map((r) => Math.max(0, r.rain_in ?? 0));
-  const wind = forwardHourlyRecords.map((r) => r.wind_mph);
-  const freezingLevel = forwardHourlyRecords.map((r) => r.freezing_level_ft);
-  const tempVals = forwardHourlyRecords.map((r) => r.temperature_f).filter((v) => Number.isFinite(v));
-  const freezingLevelVals = freezingLevel.filter((v) => Number.isFinite(v));
-  const hasFreezingLevel = freezingLevelVals.length > 0;
-  const xRange = [x[0], x[x.length - 1]];
-  const noonTick0 = typeof x[0] === "string" && x[0].length >= 10 ? `${x[0].slice(0, 10)}T12:00` : null;
-  const midnightBreaks = x.filter((t) => typeof t === "string" && t.endsWith("T00:00"));
-  const midnightShapes = midnightBreaks.map((t) => ({
-    type: "line",
-    xref: "x",
-    yref: "paper",
-    x0: t,
-    x1: t,
-    y0: 0,
-    y1: 1,
-    line: { color: "#d5dfeb", width: 1, dash: "dot" }
-  }));
-
-  const tempMin = tempVals.length ? Math.min(...tempVals) : FREEZE_F - 6;
-  const tempMax = tempVals.length ? Math.max(...tempVals) : FREEZE_F + 6;
-  const tempSpread = Math.max(6, tempMax - tempMin);
-  const tempPad = Math.max(2.5, tempSpread * 0.12);
-  const tempRange = [Math.min(tempMin - tempPad, FREEZE_F - 1), Math.max(tempMax + tempPad, FREEZE_F + 1)];
-
-  const precipMax = Math.max(0, ...snow, ...rain);
-  const precipPad = Math.max(0.03, precipMax * 0.14);
-  const precipRange = [0, precipMax > 0 ? precipMax + precipPad : 0.2];
-
-  const windVals = wind.filter((v) => Number.isFinite(v));
-  const windMax = windVals.length ? Math.max(...windVals) : 0;
-  const windPad = Math.max(2, windMax * 0.12);
-  const windRange = [0, windMax > 0 ? windMax + windPad : 8];
-  const freezingLevelMin = freezingLevelVals.length ? Math.min(...freezingLevelVals) : 0;
-  const freezingLevelMax = freezingLevelVals.length ? Math.max(...freezingLevelVals) : 0;
-  const freezingLevelSpread = Math.max(1000, freezingLevelMax - freezingLevelMin);
-  const freezingLevelPad = Math.max(500, freezingLevelSpread * 0.12);
-  const freezingLevelRange = freezingLevelVals.length
-    ? [Math.max(0, freezingLevelMin - freezingLevelPad), freezingLevelMax + freezingLevelPad]
-    : [0, 10000];
-
-  const freezeLineShape = {
-    type: "line",
-    xref: "x",
-    yref: "y",
-    x0: xRange[0],
-    x1: xRange[1],
-    y0: FREEZE_F,
-    y1: FREEZE_F,
-    line: { color: "#62717d", width: 1, dash: "dot" }
-  };
-
-  const data = [
-    {
-      x,
-      y: snow,
-      type: "bar",
-      yaxis: "y2",
-      marker: { color: "rgba(52, 136, 243, 0.85)" },
-      name: "Snow (in/hr)",
-      hovertemplate: "Time %{x}<br>Snow %{y:.2f} in/hr<extra></extra>"
-    },
-    {
-      x,
-      y: rain,
-      type: "bar",
-      yaxis: "y2",
-      marker: { color: "rgba(130, 36, 40, 0.86)" },
-      name: "Rain (in/hr)",
-      hovertemplate: "Time %{x}<br>Rain %{y:.2f} in/hr<extra></extra>"
-    },
-    {
-      x: split.blue.x,
-      y: split.blue.y,
-      type: "scatter",
-      mode: "lines",
-      line: { color: "#2f86eb", width: 1.8 },
-      yaxis: "y",
-      name: "Temp <= 32F"
-    },
-    {
-      x: split.red.x,
-      y: split.red.y,
-      type: "scatter",
-      mode: "lines",
-      line: { color: "#d94b45", width: 1.8 },
-      yaxis: "y",
-      name: "Temp > 32F"
-    },
-    {
-      x,
-      y: wind,
-      type: "scatter",
-      mode: "lines",
-      line: { color: "#35765b", width: 1.4, dash: "dot" },
-      yaxis: "y3",
-      name: "Wind (mph)",
-      hovertemplate: "Time %{x}<br>Wind %{y:.1f} mph<extra></extra>"
-    },
-  ];
-  if (hasFreezingLevel) {
-    data.push({
-      x,
-      y: freezingLevel,
-      type: "scatter",
-      mode: "lines",
-      line: { color: "#6b66c4", width: 1.4, dash: "dash" },
-      yaxis: "y4",
-      name: "Freezing Elev. (ft)",
-      hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
-    });
-  }
-
-  const layout = {
-    barmode: "group",
-    margin: { l: PLOT_LEFT_MARGIN, r: hasFreezingLevel ? 140 : 88, t: 10, b: 36 },
-    paper_bgcolor: "#ffffff",
-    plot_bgcolor: "#ffffff",
-    xaxis: {
-      range: xRange,
-      showgrid: false,
-      title: "Time",
-      tick0: noonTick0 || undefined,
-      dtick: 24 * 60 * 60 * 1000,
-      tickformat: "%b %-d<br>%A"
-    },
-    yaxis: {
-      title: "Temperature (F)",
-      range: tempRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2"
-    },
-    yaxis2: {
-      title: "Rain/Snow (in/hr)",
-      overlaying: "y",
-      side: "right",
-      range: precipRange,
-      showgrid: false
-    },
-    yaxis3: {
-      title: "Wind (mph)",
-      overlaying: "y",
-      side: "right",
-      anchor: "free",
-      position: hasFreezingLevel ? 0.87 : 0.9,
-      range: windRange,
-      showgrid: false
-    },
-    shapes: [freezeLineShape, ...midnightShapes],
-    legend: { orientation: "h", y: 1.12, x: 0 }
-  };
-  if (hasFreezingLevel) {
-    layout.yaxis4 = {
-      title: "Freezing Elev. (ft)",
-      overlaying: "y",
-      side: "right",
-      anchor: "free",
-      position: 0.74,
-      range: freezingLevelRange,
-      showgrid: false
-    };
-  }
-
-  setBaseShapes("forecast-chart", [freezeLineShape, ...midnightShapes]);
-  Plotly.react("forecast-chart", data, layout, getPlotConfig());
 }
 
 async function loadSeason(lat, lon, options = {}) {
@@ -3709,6 +4267,16 @@ async function loadSeason(lat, lon, options = {}) {
     activeLat: lat,
     activeLon: lon
   };
+  const syncActiveModeOptions = () => {
+    activeModeOptions = {
+      viewMode: modeInfo.viewMode,
+      dataMode: modeInfo.dataMode,
+      stationName: modeInfo.stationName,
+      stationId: modeInfo.stationId,
+      stationUrl: modeInfo.stationUrl
+    };
+  };
+  syncActiveModeOptions();
   activeDataMode = modeInfo.dataMode;
   activeMetricSourceStats = null;
   document.body.classList.toggle("station-view", modeInfo.viewMode === "station");
@@ -3772,6 +4340,7 @@ async function loadSeason(lat, lon, options = {}) {
   const historySource = historyResult.value.source;
   const archiveSnowHistory = archiveSnowResult.value;
   const timezone = historyJson.timezone || "auto";
+  activeDisplayTimezone = normalizeTimezoneKey(timezone);
   const currentHourKey = formatHourKeyInTimezone(new Date().toISOString(), timezone);
   const snowfallUnit =
     archiveSnowHistory?.dailyUnit ||
@@ -3794,14 +4363,12 @@ async function loadSeason(lat, lon, options = {}) {
   }
 
   let forwardHourlyRecords = [];
-  let forwardSummary = null;
   let modelNow = null;
   if (forwardResult.status === "fulfilled" && forwardResult.value.ok) {
     const forwardJson = await forwardResult.value.json();
     const forwardWindow = deriveForward7dWindow(forwardJson);
     forwardHourlyRecords = forwardWindow.hourlyRecords;
     modelNow = forwardWindow.modelNow;
-    forwardSummary = summarizeForwardWindow(forwardHourlyRecords);
   }
   if (isStale()) {
     return;
@@ -3869,6 +4436,7 @@ async function loadSeason(lat, lon, options = {}) {
       if (!modeInfo.stationUrl && stationTarget.station_url) {
         modeInfo.stationUrl = toHttps(stationTarget.station_url) || "";
       }
+      syncActiveModeOptions();
       renderViewModeBanner(modeInfo, stationCrossCheckResolved?.stationObs || stationTarget);
       try {
         const stationHistory = await fetchStationHourlyHistory(stationTarget, seasonStart, historyEndDate, timezone, signal);
@@ -3912,50 +4480,149 @@ async function loadSeason(lat, lon, options = {}) {
   }
 
   const firstSnowRecord = dailyRecords.find((d) => d.snowfall_in_sum > 0);
-  const displayStartDay = firstSnowRecord ? addDaysToDayKey(firstSnowRecord.date, -1) : seasonStart;
-  const xRangeHourly = [`${displayStartDay}T00:00`, displayHourlyRecords[displayHourlyRecords.length - 1].time];
-  const xRangeDaily = [displayStartDay, dailyRecords[dailyRecords.length - 1].date];
+  const seasonDisplayStartDay = firstSnowRecord ? addDaysToDayKey(firstSnowRecord.date, -1) : seasonStart;
+  const latestDay = dailyRecords[dailyRecords.length - 1].date;
+  const historyRange = getSelectedHistoryRange();
+  const rolling14StartDay = addDaysToDayKey(latestDay, -13);
+  const displayStartDay =
+    historyRange === "season"
+      ? seasonDisplayStartDay
+      : rolling14StartDay < seasonStart
+      ? seasonStart
+      : rolling14StartDay;
+  const historyRangeLabel = historyRange === "season" ? "Season" : "Last 14 days";
+  const visibleDailyRecords = dailyRecords.filter((d) => d.date >= displayStartDay && d.date <= latestDay);
+  const visibleHourlyRecords = displayHourlyRecords.filter(
+    (r) => typeof r.time === "string" && r.time >= `${displayStartDay}T00:00` && r.time.slice(0, 10) <= latestDay
+  );
+  const visibleEvents = events.filter((e) => e.date >= displayStartDay && e.date <= latestDay);
+  const visibleRuleMatches = filterRuleMatches(analysis.ruleMatches, displayStartDay, latestDay);
+  const effectiveDailyRecords = visibleDailyRecords.length ? visibleDailyRecords : dailyRecords;
+  const effectiveHourlyRecords = visibleHourlyRecords.length ? visibleHourlyRecords : displayHourlyRecords;
+  const effectiveRuleMatches = visibleDailyRecords.length ? visibleRuleMatches : analysis.ruleMatches;
+  const effectiveEvents = visibleDailyRecords.length ? visibleEvents : events;
+  const showForecastInCharts = getShowForecastEnabled();
+  const historicalLatestHour = effectiveHourlyRecords[effectiveHourlyRecords.length - 1]?.time || null;
+  const forecastBoundaryDay = showForecastInCharts ? addDaysToDayKey(latestDay, 1) : null;
+  const forecastBoundaryHourDaily = forecastBoundaryDay ? `${forecastBoundaryDay}T00:00` : null;
+  const forecastBoundaryHourHourly =
+    showForecastInCharts && historicalLatestHour ? addHoursToHourKey(historicalLatestHour, 1) : null;
+  const forecastEndExclusiveDay =
+    forecastBoundaryDay ? addDaysToDayKey(forecastBoundaryDay, FORECAST_WINDOW_DAYS) : null;
+  const forecastEndExclusiveHour = forecastEndExclusiveDay ? `${forecastEndExclusiveDay}T00:00` : null;
+  const forecastMaxDailyDay =
+    forecastBoundaryDay ? addDaysToDayKey(forecastBoundaryDay, Math.max(FORECAST_WINDOW_DAYS - 1, 0)) : null;
+  const forwardFutureHourly =
+    showForecastInCharts && historicalLatestHour && forecastBoundaryHourHourly && forecastEndExclusiveHour
+      ? forwardHourlyRecords.filter(
+          (r) =>
+            typeof r.time === "string" && r.time >= forecastBoundaryHourHourly && r.time < forecastEndExclusiveHour
+        )
+      : [];
+  const forecastStartHour = forwardFutureHourly.length
+    ? forwardFutureHourly[0]?.time || forecastBoundaryHourHourly
+    : null;
+  const chartHourlyRecords = forwardFutureHourly.length
+    ? [...effectiveHourlyRecords, ...forwardFutureHourly]
+    : effectiveHourlyRecords;
+  const forwardDailyHourly =
+    showForecastInCharts && forwardFutureHourly.length
+      ? forwardFutureHourly.filter(
+          (r) =>
+            typeof r.time === "string" &&
+            Boolean(forecastBoundaryHourDaily) &&
+            r.time >= forecastBoundaryHourDaily
+        )
+      : [];
+  let chartDailyRecords = effectiveDailyRecords;
+  let forecastStartDay = null;
+  if (forwardDailyHourly.length) {
+    const combinedDailyApplied = applyArchiveSnowDailyToRecords(
+      aggregateDaily([...effectiveHourlyRecords, ...forwardDailyHourly]),
+      archiveSnowHistory,
+      currentHourKey
+    );
+    chartDailyRecords = derivePowderScores(combinedDailyApplied.dailyRecords);
+    if (forecastMaxDailyDay) {
+      chartDailyRecords = chartDailyRecords.filter((d) => d.date <= forecastMaxDailyDay);
+    }
+    const hasForecastWindow =
+      Boolean(forecastBoundaryDay) &&
+      chartDailyRecords.some(
+        (d) =>
+          d.date >= forecastBoundaryDay &&
+          d.date > latestDay &&
+          (!forecastMaxDailyDay || d.date <= forecastMaxDailyDay)
+      );
+    forecastStartDay = hasForecastWindow ? forecastBoundaryDay : null;
+  }
+  const forwardSummaryForCharts = forwardFutureHourly.length ? summarizeForwardWindow(forwardFutureHourly) : null;
+  const xRangeHourly = [
+    `${displayStartDay}T00:00`,
+    showForecastInCharts && forecastEndExclusiveHour
+      ? forecastEndExclusiveHour
+      : chartHourlyRecords[chartHourlyRecords.length - 1]?.time || displayHourlyRecords[displayHourlyRecords.length - 1].time
+  ];
+  const xRangeDaily = [
+    displayStartDay,
+    showForecastInCharts && forecastEndExclusiveDay
+      ? forecastEndExclusiveDay
+      : chartDailyRecords[chartDailyRecords.length - 1]?.date || latestDay
+  ];
   const dataThroughTime = displayHourlyRecords[displayHourlyRecords.length - 1]?.time || null;
   const snowDataThroughTime =
     archiveSnowApplied.todaySnowThroughTime ||
     archiveSnowHistory?.lastHourlyTime ||
     (archiveSnowHistory?.lastDailyDate ? `${archiveSnowHistory.lastDailyDate}T23:00` : null);
   const chartSources = deriveChartSources(modeInfo.dataMode, metricSourceStats);
-  const stationBackedCharts = Object.entries(chartSources).filter(
-    ([chartId, source]) => chartId !== "forecast-chart" && source !== "model"
-  ).length;
+  const stationBackedCharts = Object.entries(chartSources).filter(([, source]) => source !== "model").length;
+  const timelineEvents = showForecastInCharts
+    ? analyzeDailyRules(chartDailyRecords).events.filter(
+        (e) => e.date >= displayStartDay && (!forecastMaxDailyDay || e.date <= forecastMaxDailyDay)
+      )
+    : effectiveEvents;
 
   const buildMetaText = (stationConfidenceText) =>
     `Lat ${lat.toFixed(4)}, Lon ${lon.toFixed(4)} | ` +
     `Season: ${seasonStart} to ${todayDate} (history through ${historyEndDate}) | ` +
+    `Display range: ${historyRangeLabel} | ` +
     `Display start: ${displayStartDay} | ` +
     `History source: ${historySource} | ` +
     `Snow source: archive daily (today from archive hourly) | ` +
     `Snowfall unit: ${snowfallUnit} | ` +
+    `Display snow unit: ${getSelectedLengthUnit()} | ` +
     `Timezone: ${timezone} | ` +
     `Data through: ${dataThroughTime ? `${dataThroughTime} ${timezone}` : "n/a"} | ` +
     `Snow data through: ${snowDataThroughTime ? `${snowDataThroughTime} ${timezone}` : "n/a"} | ` +
+    `Forecast in charts: ${showForecastInCharts ? "on" : "off"} | ` +
     `Elevation: ${elevationTxt} | ` +
     `Forward horizon: ${forwardHourlyRecords.length} h | ` +
     `Station confidence: ${stationConfidenceText} | ` +
     `Data mode: ${modeInfo.dataMode} | ` +
     `Station history: ${stationHistoryNote} | ` +
     `Station-backed charts: ${stationBackedCharts} | ` +
-    `Events flagged: ${events.length}`;
+    `Events flagged: ${effectiveEvents.length}`;
 
-  renderEventsTimeline(events, xRangeDaily);
-  renderTemperatureChart(displayHourlyRecords, xRangeHourly);
-  renderFreezingLevelChart(displayHourlyRecords, xRangeHourly, elevationFt);
-  renderPrecipChart(dailyRecords, xRangeDaily);
-  renderPowderChart(dailyRecords, xRangeDaily);
-  renderSnowpackChart(dailyRecords, xRangeDaily);
-  renderWindChart(dailyRecords, xRangeDaily);
-  renderSunChart(dailyRecords, xRangeDaily);
-  renderForwardChart(forwardHourlyRecords);
+  const timelineForecastStartDay =
+    showForecastInCharts && forecastBoundaryDay && xRangeDaily[1] > latestDay ? forecastBoundaryDay : null;
+  renderEventsTimeline(timelineEvents, xRangeDaily, timelineForecastStartDay);
+  renderTemperatureChart(chartHourlyRecords, xRangeHourly, forecastStartHour);
+  renderFreezingLevelChart(chartHourlyRecords, xRangeHourly, elevationFt, forecastStartHour);
+  renderPrecipChart(chartDailyRecords, xRangeDaily, forecastStartDay);
+  renderFluffChart(chartDailyRecords, xRangeDaily, forecastStartDay);
+  renderPowderChart(chartDailyRecords, xRangeDaily, forecastStartDay);
+  renderSnowpackChart(chartDailyRecords, xRangeDaily, forecastStartDay);
+  renderWindChart(chartDailyRecords, xRangeDaily, forecastStartDay);
+  renderSunChart(chartDailyRecords, xRangeDaily, forecastStartDay);
   applyChartSources(chartSources);
   setupLinkedHoverHandlers();
-  renderSummary(displayHourlyRecords, dailyRecords, analysis.ruleMatches, forwardSummary);
-  renderEvents(events);
+  renderSummary(
+    effectiveHourlyRecords,
+    effectiveDailyRecords,
+    effectiveRuleMatches,
+    showForecastInCharts ? forwardSummaryForCharts : null
+  );
+  renderEvents(effectiveEvents);
   metaEl.textContent = buildMetaText("pending");
 
   const finalizeWithStationPayload = (stationCrossCheck) => {
@@ -3971,6 +4638,7 @@ async function loadSeason(lat, lon, options = {}) {
     if (stationCrossCheck?.stationObs?.station_url && !modeInfo.stationUrl) {
       modeInfo.stationUrl = toHttps(stationCrossCheck.stationObs.station_url) || "";
     }
+    syncActiveModeOptions();
     renderStationCrossCheck(stationCrossCheck, modeInfo);
     renderViewModeBanner(modeInfo, stationCrossCheck?.stationObs || null);
     const stationConfidenceText =
@@ -4034,6 +4702,69 @@ formEl.addEventListener("submit", async (event) => {
     setStatus(err instanceof Error ? err.message : "Failed to load data.");
   }
 });
+
+for (const input of historyRangeEls) {
+  input.addEventListener("change", async () => {
+    if (!input.checked) {
+      return;
+    }
+    const lat = Number(latInputEl.value);
+    const lon = Number(lonInputEl.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      setStatus("Enter valid numeric latitude and longitude.");
+      return;
+    }
+    try {
+      await loadSeason(lat, lon, { ...activeModeOptions });
+    } catch (err) {
+      if (isAbortError(err)) {
+        return;
+      }
+      setStatus(err instanceof Error ? err.message : "Failed to change history range.");
+    }
+  });
+}
+
+for (const input of lengthUnitEls) {
+  input.addEventListener("change", async () => {
+    if (!input.checked) {
+      return;
+    }
+    const lat = Number(latInputEl.value);
+    const lon = Number(lonInputEl.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      setStatus("Enter valid numeric latitude and longitude.");
+      return;
+    }
+    try {
+      await loadSeason(lat, lon, { ...activeModeOptions });
+    } catch (err) {
+      if (isAbortError(err)) {
+        return;
+      }
+      setStatus(err instanceof Error ? err.message : "Failed to change display units.");
+    }
+  });
+}
+
+if (forecastToggleEl) {
+  forecastToggleEl.addEventListener("change", async () => {
+    const lat = Number(latInputEl.value);
+    const lon = Number(lonInputEl.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      setStatus("Enter valid numeric latitude and longitude.");
+      return;
+    }
+    try {
+      await loadSeason(lat, lon, { ...activeModeOptions });
+    } catch (err) {
+      if (isAbortError(err)) {
+        return;
+      }
+      setStatus(err instanceof Error ? err.message : "Failed to change forecast toggle.");
+    }
+  });
+}
 
 for (const shortcut of shortcutEls) {
   shortcut.addEventListener("click", async (event) => {
@@ -4110,9 +4841,22 @@ initMapPickerModal();
 initChartExpansionControls();
 
 function initDefaults() {
-  latInputEl.value = String(DEFAULT_LAT);
-  lonInputEl.value = String(DEFAULT_LON);
-  loadSeason(DEFAULT_LAT, DEFAULT_LON).catch((err) => {
+  if (historyRangeEls.length) {
+    for (const input of historyRangeEls) {
+      input.checked = input.value === HISTORY_RANGE_DEFAULT;
+    }
+  }
+  if (lengthUnitEls.length) {
+    for (const input of lengthUnitEls) {
+      input.checked = input.value === LENGTH_UNIT_DEFAULT;
+    }
+  }
+  if (forecastToggleEl) {
+    forecastToggleEl.checked = SHOW_FORECAST_DEFAULT;
+  }
+  latInputEl.value = String(INITIAL_DEFAULT_LAT);
+  lonInputEl.value = String(INITIAL_DEFAULT_LON);
+  loadSeason(INITIAL_DEFAULT_LAT, INITIAL_DEFAULT_LON).catch((err) => {
     if (isAbortError(err)) {
       return;
     }
@@ -4120,4 +4864,8 @@ function initDefaults() {
   });
 }
 
-window.addEventListener("load", initDefaults);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initDefaults, { once: true });
+} else {
+  initDefaults();
+}

@@ -48,36 +48,64 @@
     </header>
 
     <section class="controls">
-      <form id="query-form">
+      <form id="query-form" autocomplete="off">
         <label>
           Latitude
-          <input id="lat-input" name="lat" type="number" step="any" min="-90" max="90" required placeholder="39.19517">
+          <input id="lat-input" name="lat" type="number" step="any" min="-90" max="90" required placeholder="39.19517" autocomplete="off">
         </label>
         <label>
           Longitude
-          <input id="lon-input" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-120.2367">
+          <input id="lon-input" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-120.2367" autocomplete="off">
         </label>
         <button id="map-picker-open" type="button" class="map-picker-open">Select on map</button>
         <button type="submit">Load Season</button>
       </form>
+      <div class="history-forecast-row">
+        <div class="history-range-toggle length-unit-toggle" role="group" aria-label="Length units">
+          <span class="history-range-label">Units</span>
+          <div class="segmented-control">
+            <label class="history-range-option">
+              <input type="radio" name="length-unit" value="in" checked>
+              <span>in</span>
+            </label>
+            <label class="history-range-option">
+              <input type="radio" name="length-unit" value="cm">
+              <span>cm</span>
+            </label>
+          </div>
+        </div>
+        <div class="history-range-toggle" role="group" aria-label="History range">
+          <span class="history-range-label">History</span>
+          <div class="segmented-control">
+            <label class="history-range-option">
+              <input type="radio" name="history-range" value="14d" checked>
+              <span>Last 14d</span>
+            </label>
+            <label class="history-range-option">
+              <input type="radio" name="history-range" value="season">
+              <span>Season</span>
+            </label>
+          </div>
+        </div>
+        <div class="forecast-toggle">
+          <label class="forecast-toggle-option">
+            <input id="forecast-toggle" type="checkbox" checked>
+            <span>Show 7d forecast</span>
+          </label>
+        </div>
+      </div>
       <nav class="location-shortcuts" aria-label="Saved locations" hidden>
-        <a href="#" class="location-shortcut" data-lat="37.783687" data-lon="-119.516807">
-          Mt Watkins Summit, CA (8,461 ft)
-        </a>
         <a href="#" class="location-shortcut" data-lat="37.748747" data-lon="-119.587162">
           Yosemite Valley Visitor Center, CA (~4,029 ft)
         </a>
         <a href="#" class="location-shortcut" data-lat="37.876900" data-lon="-119.343600">
           Tuolumne Meadows, CA (~8,694 ft)
         </a>
-        <a href="#" class="location-shortcut" data-lat="40.437780" data-lon="-121.533830">
-          Lassen NP, CA (~6,700 ft)
-        </a>
-        <a href="#" class="location-shortcut" data-lat="36.608170" data-lon="-118.671060">
-          Peak Lake Hut, CA
-        </a>
         <a href="#" class="location-shortcut" data-lat="37.787460" data-lon="-119.524440">
           Snow Creek Cabin, CA (~7,650 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="37.783687" data-lon="-119.516807">
+          Mt Watkins Summit, CA (8,461 ft)
         </a>
         <a href="#" class="location-shortcut" data-lat="37.626780" data-lon="-119.549750">
           Ostrander Ski Hut, CA (~8,500 ft)
@@ -90,6 +118,12 @@
         </a>
         <a href="#" class="location-shortcut" data-lat="38.924884" data-lon="-120.403535">
           Robbs Hut, CA (~6,686 ft)
+        </a>
+        <a href="#" class="location-shortcut" data-lat="36.608170" data-lon="-118.671060">
+          Peak Lake Hut, CA
+        </a>
+        <a href="#" class="location-shortcut" data-lat="40.437780" data-lon="-121.533830">
+          Lassen NP, CA (~6,700 ft)
         </a>
         <a href="#" class="location-shortcut" data-lat="38.006440" data-lon="-107.946850">
           Last Dollar Hut, CO (~10,980 ft)
@@ -112,6 +146,9 @@
         <a href="#" class="location-shortcut" data-lat="44.543700" data-lon="-72.814300">
           Mt Mansfield Summit, VT (4,393 ft)
         </a>
+        <a href="#" class="location-shortcut" data-lat="44.465450" data-lon="-72.745180">
+          von Trapp Lodge, VT (~1,355 ft)
+        </a>
         <a href="#" class="location-shortcut" data-lat="42.637600" data-lon="-73.166200">
           Mt Graylock Summit, MA (3,491 ft)
         </a>
@@ -120,9 +157,6 @@
         </a>
         <a href="#" class="location-shortcut" data-lat="41.308300" data-lon="-72.927900">
           New Haven, CT (~59 ft)
-        </a>
-        <a href="#" class="location-shortcut" data-lat="44.465450" data-lon="-72.745180">
-          von Trapp Lodge, VT (~1,355 ft)
         </a>
       </nav>
       <p id="status" aria-live="polite"></p>
@@ -143,13 +177,32 @@
         <div class="timeline-head-main">
           <h2>Detected Event Timeline</h2>
           <div class="timeline-legend" aria-label="Event type legend">
-            <span class="timeline-legend-item"><span class="timeline-swatch freeze"></span>Freeze-Thaw</span>
-            <span class="timeline-legend-item"><span class="timeline-swatch rain"></span>Rain-on-Snow</span>
-            <span class="timeline-legend-item"><span class="timeline-swatch wind"></span>Wind Slab</span>
-            <span class="timeline-legend-item"><span class="timeline-swatch sun"></span>Sun-Bake</span>
+            <span class="timeline-legend-item">
+              <span class="timeline-swatch freeze"></span>
+              <span>Freeze-Thaw</span>
+              <button class="summary-help timeline-help" type="button" data-rule-help="freeze" aria-label="Explain Freeze-Thaw rule logic" title="Explain Freeze-Thaw rule logic">?</button>
+            </span>
+            <span class="timeline-legend-item">
+              <span class="timeline-swatch rain"></span>
+              <span>Rain-on-Snow</span>
+              <button class="summary-help timeline-help" type="button" data-rule-help="rain" aria-label="Explain Rain-on-Snow rule logic" title="Explain Rain-on-Snow rule logic">?</button>
+            </span>
+            <span class="timeline-legend-item">
+              <span class="timeline-swatch wind"></span>
+              <span>Wind Slab</span>
+              <button class="summary-help timeline-help" type="button" data-rule-help="wind" aria-label="Explain Wind Slab rule logic" title="Explain Wind Slab rule logic">?</button>
+            </span>
+            <span class="timeline-legend-item">
+              <span class="timeline-swatch sun"></span>
+              <span>Sun-Bake</span>
+              <button class="summary-help timeline-help" type="button" data-rule-help="sun" aria-label="Explain Sun-Bake rule logic" title="Explain Sun-Bake rule logic">?</button>
+            </span>
           </div>
         </div>
-        <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+        <div class="chart-head-actions">
+          <button class="summary-help" type="button" data-rule-help="chart_timeline" aria-label="Explain timeline chart and data sources" title="Explain chart and data sources">?</button>
+          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+        </div>
       </div>
       <div id="events-timeline-chart" class="chart chart-timeline"></div>
     </section>
@@ -157,9 +210,15 @@
     <section class="charts">
       <article class="chart-card" data-chart-card data-chart-id="temperature-chart">
         <div class="chart-card-head">
-          <h2>Hourly Temperature (F)</h2>
+          <div class="chart-title-inline">
+            <h2>Hourly Temperature (F)</h2>
+            <div class="chart-inline-legend" aria-label="Hourly temperature legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch temp-cold"></span>&lt;= 32F</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch temp-warm"></span>&gt; 32F</span>
+            </div>
+          </div>
           <div class="chart-head-actions">
-            <button class="summary-help" type="button" data-rule-help="freeze" aria-label="Explain Freeze-Thaw rule" title="Explain rule logic">?</button>
+            <button class="summary-help" type="button" data-rule-help="chart_temperature" aria-label="Explain temperature chart and data sources" title="Explain chart and data sources">?</button>
             <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
           </div>
         </div>
@@ -167,26 +226,58 @@
       </article>
       <article class="chart-card" data-chart-card data-chart-id="freezing-level-chart">
         <div class="chart-card-head">
-          <h2>Hourly Freezing Elevation (ft)</h2>
-          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          <div class="chart-title-inline">
+            <h2>Hourly Freezing Elevation (ft)</h2>
+            <div class="chart-inline-legend" aria-label="Hourly freezing elevation legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch freeze-below"></span>Below site elev</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch freeze-above"></span>Above site elev</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch line freeze-site"></span>Site elev ref</span>
+            </div>
+          </div>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="chart_freezing_level" aria-label="Explain freezing elevation chart and data sources" title="Explain chart and data sources">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
         </div>
         <div id="freezing-level-chart" class="chart"></div>
       </article>
       <article class="chart-card" data-chart-card data-chart-id="precip-chart">
         <div class="chart-card-head">
-          <h2>Daily Rain/Snow Depth (in/day)</h2>
+          <div class="chart-title-inline">
+            <h2>Daily Rain/Snow Depth</h2>
+            <div class="chart-inline-legend" aria-label="Daily rain and snow legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch precip-snow"></span>Snow</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch precip-rain"></span>Rain</span>
+            </div>
+          </div>
           <div class="chart-head-actions">
-            <button class="summary-help" type="button" data-rule-help="rain" aria-label="Explain Rain-on-Snow rule" title="Explain rule logic">?</button>
+            <button class="summary-help" type="button" data-rule-help="chart_precip" aria-label="Explain daily rain and snow chart and data sources" title="Explain chart and data sources">?</button>
             <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
           </div>
         </div>
         <div id="precip-chart" class="chart"></div>
       </article>
+      <article class="chart-card" data-chart-card data-chart-id="fluff-chart">
+        <div class="chart-card-head">
+          <div class="chart-title-inline">
+            <h2>Fluff Factor (Snow:SWE)</h2>
+            <div class="chart-inline-legend" aria-label="Daily fluff factor legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch fluff-main"></span>Fluff (x:1)</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch line fluff-ref"></span>10:1 ref</span>
+            </div>
+          </div>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="chart_fluff" aria-label="Explain fluff factor chart and data sources" title="Explain chart and data sources">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
+        </div>
+        <div id="fluff-chart" class="chart"></div>
+      </article>
       <article class="chart-card" data-chart-card data-chart-id="powder-chart">
         <div class="chart-card-head">
           <h2>Powder Score (0-100)</h2>
           <div class="chart-head-actions">
-            <button class="summary-help" type="button" data-rule-help="powder" aria-label="Explain Powder Score logic" title="Explain rule logic">?</button>
+            <button class="summary-help" type="button" data-rule-help="chart_powder" aria-label="Explain powder score chart and data sources" title="Explain chart and data sources">?</button>
             <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
           </div>
         </div>
@@ -194,16 +285,30 @@
       </article>
       <article class="chart-card" data-chart-card data-chart-id="snowpack-chart">
         <div class="chart-card-head">
-          <h2>Estimated Snowpack Depth (in)</h2>
-          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          <div class="chart-title-inline">
+            <h2>Estimated Snowpack Depth</h2>
+            <div class="chart-inline-legend" aria-label="Estimated snowpack depth legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch snowpack-end"></span>End-of-day depth</span>
+            </div>
+          </div>
+          <div class="chart-head-actions">
+            <button class="summary-help" type="button" data-rule-help="chart_snowpack" aria-label="Explain snowpack depth chart and data sources" title="Explain chart and data sources">?</button>
+            <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
+          </div>
         </div>
         <div id="snowpack-chart" class="chart"></div>
       </article>
       <article class="chart-card" data-chart-card data-chart-id="wind-chart">
         <div class="chart-card-head">
-          <h2>Daily Wind (mph)</h2>
+          <div class="chart-title-inline">
+            <h2>Daily Wind (mph)</h2>
+            <div class="chart-inline-legend" aria-label="Daily wind legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch wind-avg"></span>Avg wind</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch wind-max"></span>Max wind</span>
+            </div>
+          </div>
           <div class="chart-head-actions">
-            <button class="summary-help" type="button" data-rule-help="wind" aria-label="Explain Wind Slab rule" title="Explain rule logic">?</button>
+            <button class="summary-help" type="button" data-rule-help="chart_wind" aria-label="Explain daily wind chart and data sources" title="Explain chart and data sources">?</button>
             <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
           </div>
         </div>
@@ -211,20 +316,19 @@
       </article>
       <article class="chart-card" data-chart-card data-chart-id="sun-chart">
         <div class="chart-card-head">
-          <h2>Daily Sun Strength (Shortwave MJ/m^2)</h2>
+          <div class="chart-title-inline">
+            <h2>Daily Sun Strength (Shortwave MJ/m^2)</h2>
+            <div class="chart-inline-legend" aria-label="Daily sun strength legend">
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch sun-shortwave"></span>Shortwave</span>
+              <span class="chart-inline-legend-item"><span class="chart-inline-swatch line sun-index"></span>Sun-bake index</span>
+            </div>
+          </div>
           <div class="chart-head-actions">
-            <button class="summary-help" type="button" data-rule-help="sun" aria-label="Explain Sun-Bake rule" title="Explain rule logic">?</button>
+            <button class="summary-help" type="button" data-rule-help="chart_sun" aria-label="Explain daily sun chart and data sources" title="Explain chart and data sources">?</button>
             <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
           </div>
         </div>
         <div id="sun-chart" class="chart"></div>
-      </article>
-      <article class="chart-card" data-chart-card data-chart-id="forecast-chart">
-        <div class="chart-card-head">
-          <h2>Forward 7d Outlook</h2>
-          <button class="chart-close" type="button" aria-label="Close expanded chart">X</button>
-        </div>
-        <div id="forecast-chart" class="chart"></div>
       </article>
     </section>
 
@@ -237,7 +341,7 @@
     </section>
 
     <footer class="site-footer">
-      Cooked with Codex by Johan Ugander. Last Updated February 11, 2026.
+      Cooked with Codex by Johan Ugander. Last Updated February 13, 2026.
     </footer>
   </main>
 
