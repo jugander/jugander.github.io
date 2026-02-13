@@ -149,7 +149,8 @@ const RULE_HELP = {
     body:
       `What this chart shows:\n` +
       `- Hourly freezing-level elevation (ft)\n` +
-      `- Y-range is fixed to 0-15,000 ft; values above that are shown as dotted cap segments at 15,000 ft\n` +
+      `- Y-range is 0 to max(2,000 ft, min(15,000 ft, 2 x site elevation))\n` +
+      `- Values beyond chart bounds are shown as dotted cap segments at the top/bottom boundary\n` +
       `- Dashed horizontal reference line marks your selected location elevation\n` +
       `- Colored segments indicate freezing level below/above site elevation\n` +
       `- If forecast continuation is enabled, the series extends into forecast hours`
@@ -2291,7 +2292,7 @@ function derivePowderScores(dailyRecords) {
     const daysSinceSnow = lastSnowIdx === null ? 30 : idx - lastSnowIdx;
     const recentSnowWeighted = snow0 + snow1 * 0.65 + snow2 * 0.4 + snow3 * 0.2;
     const recentSnowLweWeighted = snowLwe0 + snowLwe1 * 0.65 + snowLwe2 * 0.4 + snowLwe3 * 0.2;
-    const freshBoost = clamp(recentSnowWeighted / 9, 0, 1) * 62;
+    const freshBoost = clamp(recentSnowWeighted / 8.5, 0, 1) * 66;
 
     const tempMax0 = d.temp_max_f === null ? 28 : d.temp_max_f;
     const tempMax1 = prev1?.temp_max_f === null || prev1?.temp_max_f === undefined ? tempMax0 : prev1.temp_max_f;
@@ -2303,26 +2304,26 @@ function derivePowderScores(dailyRecords) {
     const thawHoursWeighted = thawHours0 + thawHours1 * 0.45 + thawHours2 * 0.2;
     const tempWarmFactor = clamp((warmTempWeighted - 32) / 14, 0, 1);
     const thawFactor = clamp(thawHoursWeighted / 12, 0, 1);
-    const thawPenalty = (0.55 * tempWarmFactor + 0.45 * thawFactor) * 20;
+    const thawPenalty = (0.5 * tempWarmFactor + 0.5 * thawFactor) * 18;
 
     const rainIn = Math.max(0, d.rain_raw_in_sum || 0);
     const rainPrev1 = Math.max(0, prev1?.rain_raw_in_sum || 0);
     const rainPrev2 = Math.max(0, prev2?.rain_raw_in_sum || 0);
     const recentRainWeighted = rainIn + rainPrev1 * 0.65 + rainPrev2 * 0.35;
-    const rainPenalty = clamp(recentRainWeighted / 0.55, 0, 1) * 48;
+    const rainPenalty = clamp(recentRainWeighted / 0.6, 0, 1) * 44;
 
     const sunMj = Math.max(0, d.shortwave_mj_m2_sum || 0);
     const sunPrev1 = Math.max(0, prev1?.shortwave_mj_m2_sum || 0);
     const sunWeighted = sunMj + sunPrev1 * 0.55;
     const sunFactor = clamp(sunWeighted / 24, 0, 1);
     const sunTempFactor = clamp((warmTempWeighted - 30) / 10, 0, 1);
-    const sunPenalty = sunFactor * (0.4 + 0.6 * sunTempFactor) * 14;
+    const sunPenalty = sunFactor * (0.4 + 0.6 * sunTempFactor) * 12;
 
     const windMax = Math.max(0, d.wind_max_mph || 0);
     const windPrev1 = Math.max(0, prev1?.wind_max_mph || 0);
     const windWeighted = windMax + windPrev1 * 0.5;
-    const windBasePenalty = clamp((windWeighted - 15) / 35, 0, 1) * 11;
-    const windPenalty = recentSnowWeighted > 2 ? windBasePenalty * 1.25 : windBasePenalty;
+    const windBasePenalty = clamp((windWeighted - 15) / 35, 0, 1) * 9;
+    const windPenalty = recentSnowWeighted > 2 ? windBasePenalty * 1.2 : windBasePenalty;
 
     const densityLwePerIn =
       recentSnowWeighted >= 0.25 && recentSnowLweWeighted > 0 ? recentSnowLweWeighted / recentSnowWeighted : null;
@@ -2332,23 +2333,23 @@ function derivePowderScores(dailyRecords) {
     const denseSnowPenalty =
       fluffRatioForScore === null
         ? 0
-        : fluffRatioForScore >= 8.5
+        : fluffRatioForScore >= 9
         ? 0
-        : fluffRatioForScore >= 6
-        ? clamp((8.5 - fluffRatioForScore) / 2.5, 0, 1) * 6
-        : 6 + clamp((6 - fluffRatioForScore) / 3, 0, 1) * 9;
+        : fluffRatioForScore >= 6.5
+        ? clamp((9 - fluffRatioForScore) / 2.5, 0, 1) * 5
+        : 5 + clamp((6.5 - fluffRatioForScore) / 3.5, 0, 1) * 8;
     const fluffBonus =
       recentSnowWeighted < 0.5 || fluffRatioForScore === null
         ? 0
         : fluffRatioForScore <= 10
         ? 0
         : fluffRatioForScore <= 15
-        ? clamp((fluffRatioForScore - 10) / 5, 0, 1) * 10
+        ? clamp((fluffRatioForScore - 10) / 5, 0, 1) * 11
         : fluffRatioForScore <= 20
-        ? 10 + clamp((fluffRatioForScore - 15) / 5, 0, 1) * 10
-        : 20 + clamp((fluffRatioForScore - 20) / 8, 0, 1) * 4;
+        ? 11 + clamp((fluffRatioForScore - 15) / 5, 0, 1) * 11
+        : 22 + clamp((fluffRatioForScore - 20) / 8, 0, 1) * 6;
 
-    const agePenalty = clamp((daysSinceSnow - 1) / 6, 0, 1) * 18;
+    const agePenalty = clamp((daysSinceSnow - 1) / 6, 0, 1) * 16;
 
     const coldFactor = clamp((35 - warmTempWeighted) / 10, 0, 1);
     const dryFactor = clamp(1 - recentRainWeighted / 0.12, 0, 1);
@@ -2365,13 +2366,20 @@ function derivePowderScores(dailyRecords) {
             0.1 * lowSunFactor +
             0.08 * lightWindFactor +
             0.08 * fluffQualityFactor) *
-          17;
+          19;
+
+    const stormBonus =
+      recentSnowWeighted >= 6 && daysSinceSnow <= 1 && recentRainWeighted < 0.08 && thawHoursWeighted < 5
+        ? 6
+        : recentSnowWeighted >= 3 && daysSinceSnow <= 2 && recentRainWeighted < 0.12 && thawHoursWeighted < 8
+        ? 3
+        : 0;
 
     const snowDepth = d.snow_depth_end_in ?? d.snow_depth_max_in ?? 0;
-    const coveragePenalty = snowDepth >= 8 ? 0 : snowDepth >= 4 ? 5 : snowDepth >= 2 ? 11 : 18;
+    const coveragePenalty = snowDepth >= 8 ? 0 : snowDepth >= 4 ? 4 : snowDepth >= 2 ? 9 : 15;
 
     const rawScore =
-      36 +
+      38 +
       freshBoost +
       qualityBonus -
       agePenalty -
@@ -2381,7 +2389,8 @@ function derivePowderScores(dailyRecords) {
       windPenalty -
       denseSnowPenalty -
       coveragePenalty +
-      fluffBonus;
+      fluffBonus +
+      stormBonus;
     const powderScore = Math.round(clamp(rawScore, 0, 100));
 
     return {
@@ -2396,6 +2405,7 @@ function derivePowderScores(dailyRecords) {
       powder_density_lwe_per_in: densityLwePerIn === null ? null : Number(densityLwePerIn.toFixed(3)),
       powder_density_penalty: Number(denseSnowPenalty.toFixed(1)),
       powder_quality_bonus: Number(qualityBonus.toFixed(1)),
+      powder_storm_bonus: Number(stormBonus.toFixed(1)),
       powder_fluff_ratio: fluffRatioForScore === null ? null : Number(fluffRatioForScore.toFixed(1)),
       powder_fluff_bonus: Number(fluffBonus.toFixed(1)),
       powder_fluff_penalty: Number(denseSnowPenalty.toFixed(1))
@@ -3795,7 +3805,8 @@ function renderTemperatureChart(hourlyRecords, xRange, forecastStartX = null) {
     yaxis: {
       title: "Temperature (F)",
       showgrid: true,
-      gridcolor: "#e4ebf2"
+      gridcolor: "#e4ebf2",
+      zeroline: false
     },
     shapes,
     showlegend: false
@@ -3817,8 +3828,18 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt, fo
   const blueHoverTimes = buildHoverTimeLabels(split.blue.x);
   const redHoverTimes = buildHoverTimeLabels(split.red.x);
   const hasData = y.some((v) => Number.isFinite(v));
-  const overflowRaw = y.map((v) => (Number.isFinite(v) && v > FREEZING_LEVEL_MAX_FT ? v : null));
+  const chartMin = FREEZING_LEVEL_MIN_FT;
+  const derivedChartMax =
+    validElevation !== null && validElevation > 0
+      ? Math.max(2000, Math.min(FREEZING_LEVEL_MAX_FT, 2 * validElevation))
+      : FREEZING_LEVEL_MAX_FT;
+  const chartMax = derivedChartMax > chartMin ? derivedChartMax : FREEZING_LEVEL_MAX_FT;
+  const chartMaxLabel = Math.round(chartMax).toLocaleString();
+  const chartMinLabel = Math.round(chartMin).toLocaleString();
+  const overflowRaw = y.map((v) => (Number.isFinite(v) && v > chartMax ? v : null));
+  const underflowRaw = y.map((v) => (Number.isFinite(v) && v <= chartMin ? v : null));
   const hasOverflow = overflowRaw.some((v) => Number.isFinite(v));
+  const hasUnderflow = underflowRaw.some((v) => Number.isFinite(v));
   const shapes = [...forecastShapes];
 
   if (validElevation !== null) {
@@ -3834,81 +3855,114 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt, fo
     });
   }
 
-  const data =
-    validElevation === null
-      ? [
-          {
-            x,
-            y,
-            customdata: hoverTimes,
-            mode: "lines",
-            line: { color: "#597a95", width: 1.4 },
-            name: "Freezing Elev. (ft)",
-            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
-          },
-          {
-            x,
-            y: overflowRaw.map((v) => (Number.isFinite(v) ? FREEZING_LEVEL_MAX_FT : null)),
-            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
-            mode: "lines",
-            line: { color: "#597a95", width: 1.4, dash: "dot" },
-            name: `Above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft`,
-            showlegend: false,
-            hovertemplate:
-              `Time %{customdata[0]}<br>` +
-              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
-          }
-        ]
-      : [
-          {
-            x: split.blue.x,
-            y: split.blue.y,
-            customdata: blueHoverTimes,
-            mode: "lines",
-            line: { color: "#2f86eb", width: 1.5 },
-            name: "Below site elev",
-            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
-          },
-          {
-            x: split.red.x,
-            y: split.red.y,
-            customdata: redHoverTimes,
-            mode: "lines",
-            line: { color: "#d94b45", width: 1.5 },
-            name: "Above site elev",
-            hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
-          },
-          {
-            x,
-            y: overflowRaw.map((v) =>
-              Number.isFinite(v) && v <= validElevation ? FREEZING_LEVEL_MAX_FT : null
-            ),
-            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
-            mode: "lines",
-            line: { color: "#2f86eb", width: 1.4, dash: "dot" },
-            name: `> ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft (below site elev)`,
-            showlegend: false,
-            hovertemplate:
-              `Time %{customdata[0]}<br>` +
-              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
-          },
-          {
-            x,
-            y: overflowRaw.map((v) =>
-              Number.isFinite(v) && v > validElevation ? FREEZING_LEVEL_MAX_FT : null
-            ),
-            customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
-            mode: "lines",
-            line: { color: "#d94b45", width: 1.4, dash: "dot" },
-            name: `> ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft (above site elev)`,
-            showlegend: false,
-            hovertemplate:
-              `Time %{customdata[0]}<br>` +
-              `Freezing elev %{customdata[1]:.0f} ft (above ${FREEZING_LEVEL_MAX_FT.toLocaleString()} ft chart max)<extra></extra>`
-          }
-        ];
+  const data = [];
+  if (validElevation === null) {
+    data.push({
+      x,
+      y,
+      customdata: hoverTimes,
+      mode: "lines",
+      line: { color: "#597a95", width: 1.4 },
+      name: "Freezing Elev. (ft)",
+      hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+    });
 
-  const filteredData = hasOverflow ? data : data.filter((trace, idx) => (validElevation === null ? idx === 0 : idx <= 1));
+    if (hasOverflow) {
+      data.push({
+        x,
+        y: overflowRaw.map((v) => (Number.isFinite(v) ? chartMax : null)),
+        customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+        mode: "lines",
+        line: { color: "#597a95", width: 1.4, dash: "dot" },
+        name: `Above ${chartMaxLabel} ft`,
+        showlegend: false,
+        hovertemplate:
+          `Time %{customdata[0]}<br>` +
+          `Freezing elev %{customdata[1]:.0f} ft (above ${chartMaxLabel} ft chart max)<extra></extra>`
+      });
+    }
+    if (hasUnderflow) {
+      data.push({
+        x,
+        y: underflowRaw.map((v) => (Number.isFinite(v) ? chartMin : null)),
+        customdata: underflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+        mode: "lines",
+        line: { color: "#597a95", width: 1.4, dash: "dot" },
+        name: `At/Below ${chartMinLabel} ft`,
+        showlegend: false,
+        hovertemplate:
+          `Time %{customdata[0]}<br>` +
+          `Freezing elev %{customdata[1]:.0f} ft (at/below ${chartMinLabel} ft chart min)<extra></extra>`
+      });
+    }
+  } else {
+    data.push(
+      {
+        x: split.blue.x,
+        y: split.blue.y,
+        customdata: blueHoverTimes,
+        mode: "lines",
+        line: { color: "#2f86eb", width: 1.5 },
+        name: "Below site elev",
+        hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+      },
+      {
+        x: split.red.x,
+        y: split.red.y,
+        customdata: redHoverTimes,
+        mode: "lines",
+        line: { color: "#d94b45", width: 1.5 },
+        name: "Above site elev",
+        hovertemplate: "Time %{customdata}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+      }
+    );
+
+    if (hasOverflow) {
+      data.push(
+        {
+          x,
+          y: overflowRaw.map((v) => (Number.isFinite(v) && v <= validElevation ? chartMax : null)),
+          customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+          mode: "lines",
+          line: { color: "#2f86eb", width: 1.4, dash: "dot" },
+          name: `> ${chartMaxLabel} ft (below site elev)`,
+          showlegend: false,
+          hovertemplate:
+            `Time %{customdata[0]}<br>` +
+            `Freezing elev %{customdata[1]:.0f} ft (above ${chartMaxLabel} ft chart max)<extra></extra>`
+        },
+        {
+          x,
+          y: overflowRaw.map((v) => (Number.isFinite(v) && v > validElevation ? chartMax : null)),
+          customdata: overflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+          mode: "lines",
+          line: { color: "#d94b45", width: 1.4, dash: "dot" },
+          name: `> ${chartMaxLabel} ft (above site elev)`,
+          showlegend: false,
+          hovertemplate:
+            `Time %{customdata[0]}<br>` +
+            `Freezing elev %{customdata[1]:.0f} ft (above ${chartMaxLabel} ft chart max)<extra></extra>`
+        }
+      );
+    }
+
+    if (hasUnderflow) {
+      const underflowColor = chartMin <= validElevation ? "#2f86eb" : "#d94b45";
+      const underflowRole = chartMin <= validElevation ? "below" : "above";
+      data.push({
+        x,
+        y: underflowRaw.map((v) => (Number.isFinite(v) ? chartMin : null)),
+        customdata: underflowRaw.map((rawValue, idx) => [hoverTimes[idx], rawValue]),
+        mode: "lines",
+        line: { color: underflowColor, width: 1.4, dash: "dot" },
+        name: `<= ${chartMinLabel} ft (${underflowRole} site elev)`,
+        showlegend: false,
+        hovertemplate:
+          `Time %{customdata[0]}<br>` +
+          `Freezing elev %{customdata[1]:.0f} ft (at/below ${chartMinLabel} ft chart min)<extra></extra>`
+      });
+    }
+  }
 
   const layout = {
     margin: { l: PLOT_LEFT_MARGIN, r: 16, t: 10, b: 36 },
@@ -3922,7 +3976,7 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt, fo
       title: "Freezing Elevation (ft)",
       showgrid: true,
       gridcolor: "#e4ebf2",
-      range: [FREEZING_LEVEL_MIN_FT, FREEZING_LEVEL_MAX_FT]
+      range: [chartMin, chartMax]
     },
     shapes,
     annotations: hasData
@@ -3942,7 +3996,7 @@ function renderFreezingLevelChart(hourlyRecords, xRange, locationElevationFt, fo
   };
 
   setBaseShapes("freezing-level-chart", shapes);
-  Plotly.react("freezing-level-chart", filteredData, layout, getPlotConfig());
+  Plotly.react("freezing-level-chart", data, layout, getPlotConfig());
 }
 
 function renderPrecipChart(dailyRecords, xRange, forecastStartX = null) {
