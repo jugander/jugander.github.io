@@ -25,7 +25,7 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   >
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=2026-02-13-2">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -33,7 +33,7 @@
     crossorigin=""
     defer
   ></script>
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v=2026-02-13-2" defer></script>
 </head>
 <body>
   <main class="page">
@@ -61,19 +61,6 @@
         <button type="submit">Load Season</button>
       </form>
       <div class="history-forecast-row">
-        <div class="history-range-toggle length-unit-toggle" role="group" aria-label="Length units">
-          <span class="history-range-label">Units</span>
-          <div class="segmented-control">
-            <label class="history-range-option">
-              <input type="radio" name="length-unit" value="in" checked>
-              <span>in</span>
-            </label>
-            <label class="history-range-option">
-              <input type="radio" name="length-unit" value="cm">
-              <span>cm</span>
-            </label>
-          </div>
-        </div>
         <div class="history-range-toggle" role="group" aria-label="History range">
           <span class="history-range-label">History</span>
           <div class="segmented-control">
@@ -92,6 +79,19 @@
             <input id="forecast-toggle" type="checkbox" checked>
             <span>Show 7d forecast</span>
           </label>
+        </div>
+        <div class="history-range-toggle length-unit-toggle" role="group" aria-label="Length units">
+          <span class="history-range-label">Units</span>
+          <div class="segmented-control">
+            <label class="history-range-option">
+              <input type="radio" name="length-unit" value="in" checked>
+              <span>in</span>
+            </label>
+            <label class="history-range-option">
+              <input type="radio" name="length-unit" value="cm">
+              <span>cm</span>
+            </label>
+          </div>
         </div>
       </div>
       <nav class="location-shortcuts" aria-label="Saved locations" hidden>
