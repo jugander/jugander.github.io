@@ -54,7 +54,7 @@ const RULE_HELP = {
     body:
       `A day qualifies when all are true:\n` +
       `- Active snowpack exists (same active-snowpack test as freeze-thaw)\n` +
-      `- Phase-estimated rain >= ${THRESHOLDS.rainOnSnowIn} in liquid water equivalent`
+      `- Daily rain total from hourly.rain >= ${THRESHOLDS.rainOnSnowIn} in`
   },
   wind: {
     title: "Wind Slab Risk Rule",
@@ -872,8 +872,14 @@ function buildForward7dUrl(lat, lon) {
   base.searchParams.set("latitude", String(lat));
   base.searchParams.set("longitude", String(lon));
   base.searchParams.set("forecast_days", "8");
-  base.searchParams.set("hourly", ["temperature_2m", "snowfall", "rain", "precipitation", "wind_speed_10m"].join(","));
-  base.searchParams.set("current", ["temperature_2m", "snowfall", "rain", "precipitation", "wind_speed_10m"].join(","));
+  base.searchParams.set(
+    "hourly",
+    ["temperature_2m", "snowfall", "rain", "precipitation", "wind_speed_10m", "freezing_level_height"].join(",")
+  );
+  base.searchParams.set(
+    "current",
+    ["temperature_2m", "snowfall", "rain", "precipitation", "wind_speed_10m"].join(",")
+  );
   base.searchParams.set("temperature_unit", "fahrenheit");
   base.searchParams.set("wind_speed_unit", "mph");
   base.searchParams.set("precipitation_unit", "inch");
@@ -1437,26 +1443,29 @@ function computeSunBakeIndex(shortwaveMjM2Sum, tempMaxF, thawHours) {
 }
 
 function splitHourlyPrecipPhase(record) {
-  const precip = Math.max(0, record.precip_lwe_in ?? record.rain_in ?? 0);
-  if (precip <= 0) {
-    return { rain_lwe_in: 0, snow_lwe_in: 0 };
+  const rain = Math.max(0, record.rain_in ?? 0);
+  const precip = Math.max(0, record.precip_lwe_in ?? 0);
+
+  // Prefer reported rain directly and infer snow liquid from residual precip.
+  if (precip > 0) {
+    const rainLwe = clamp(rain, 0, precip);
+    const snowLwe = clamp(precip - rainLwe, 0, precip);
+    return { rain_lwe_in: rainLwe, snow_lwe_in: snowLwe, total_lwe_in: precip };
   }
 
+  // If only rain is available, treat all as rain liquid.
+  if (rain > 0) {
+    return { rain_lwe_in: rain, snow_lwe_in: 0, total_lwe_in: rain };
+  }
+
+  // Fallback when precip_lwe is missing: infer snow liquid from snowfall depth.
   const snowfallDepth = Math.max(0, record.snowfall_in ?? 0);
-  let snowLwe = clamp(snowfallDepth / 7, 0, precip);
-
-  // Preserve cold-storm behavior when snowfall depth is underreported.
-  if (record.temperature_f !== null && record.temperature_f <= 30 && snowLwe < precip * 0.25) {
-    snowLwe = precip;
+  if (snowfallDepth > 0) {
+    const snowLwe = snowfallDepth / 7;
+    return { rain_lwe_in: 0, snow_lwe_in: snowLwe, total_lwe_in: snowLwe };
   }
 
-  // Preserve warm-rain behavior when snowfall depth is near zero.
-  if (record.temperature_f !== null && record.temperature_f >= 36 && snowfallDepth < 0.02) {
-    snowLwe = 0;
-  }
-
-  const rainLwe = clamp(precip - snowLwe, 0, precip);
-  return { rain_lwe_in: rainLwe, snow_lwe_in: precip - rainLwe };
+  return { rain_lwe_in: 0, snow_lwe_in: 0, total_lwe_in: 0 };
 }
 
 function aggregateDaily(hourlyRecords) {
@@ -1488,12 +1497,14 @@ function aggregateDaily(hourlyRecords) {
     const d = byDay.get(day);
 
     if (r.snowfall_in !== null) d.snowfall_in_sum += r.snowfall_in;
-    if (r.rain_in !== null) d.rain_raw_in_sum += r.rain_in;
+    if (r.rain_in !== null) {
+      d.rain_raw_in_sum += r.rain_in;
+      d.rain_in_sum += r.rain_in;
+    }
 
     const phase = splitHourlyPrecipPhase(r);
-    d.rain_in_sum += phase.rain_lwe_in;
     d.snow_lwe_in_sum += phase.snow_lwe_in;
-    d.lwe_in_sum += phase.rain_lwe_in + phase.snow_lwe_in;
+    d.lwe_in_sum += phase.total_lwe_in ?? phase.rain_lwe_in + phase.snow_lwe_in;
 
     if (r.wind_mph !== null) {
       d.wind_sum += r.wind_mph;
@@ -1684,14 +1695,14 @@ function analyzeDailyRules(dailyRecords) {
       });
     }
 
-    if (activeSnowpack && d.rain_in_sum >= THRESHOLDS.rainOnSnowIn) {
+    if (activeSnowpack && d.rain_raw_in_sum >= THRESHOLDS.rainOnSnowIn) {
       const crustPotential = d.temp_max_f !== null && d.temp_max_f > 34;
       ruleMatches.rain.push(d.date);
       events.push({
         date: d.date,
         type: "rain",
         title: crustPotential ? "Rain-on-snow with crust potential" : "Rain-on-snow",
-        detail: `Phase-estimated rain ${d.rain_in_sum} in, total water ${d.lwe_in_sum} in.`
+        detail: `Daily rain ${d.rain_raw_in_sum} in from hourly.rain.`
       });
     }
 
@@ -3513,8 +3524,23 @@ function renderForwardChart(forwardHourlyRecords) {
   const snow = forwardHourlyRecords.map((r) => Math.max(0, r.snowfall_in ?? 0));
   const rain = forwardHourlyRecords.map((r) => Math.max(0, r.rain_in ?? 0));
   const wind = forwardHourlyRecords.map((r) => r.wind_mph);
+  const freezingLevel = forwardHourlyRecords.map((r) => r.freezing_level_ft);
   const tempVals = forwardHourlyRecords.map((r) => r.temperature_f).filter((v) => Number.isFinite(v));
+  const freezingLevelVals = freezingLevel.filter((v) => Number.isFinite(v));
+  const hasFreezingLevel = freezingLevelVals.length > 0;
   const xRange = [x[0], x[x.length - 1]];
+  const noonTick0 = typeof x[0] === "string" && x[0].length >= 10 ? `${x[0].slice(0, 10)}T12:00` : null;
+  const midnightBreaks = x.filter((t) => typeof t === "string" && t.endsWith("T00:00"));
+  const midnightShapes = midnightBreaks.map((t) => ({
+    type: "line",
+    xref: "x",
+    yref: "paper",
+    x0: t,
+    x1: t,
+    y0: 0,
+    y1: 1,
+    line: { color: "#d5dfeb", width: 1, dash: "dot" }
+  }));
 
   const tempMin = tempVals.length ? Math.min(...tempVals) : FREEZE_F - 6;
   const tempMax = tempVals.length ? Math.max(...tempVals) : FREEZE_F + 6;
@@ -3530,6 +3556,13 @@ function renderForwardChart(forwardHourlyRecords) {
   const windMax = windVals.length ? Math.max(...windVals) : 0;
   const windPad = Math.max(2, windMax * 0.12);
   const windRange = [0, windMax > 0 ? windMax + windPad : 8];
+  const freezingLevelMin = freezingLevelVals.length ? Math.min(...freezingLevelVals) : 0;
+  const freezingLevelMax = freezingLevelVals.length ? Math.max(...freezingLevelVals) : 0;
+  const freezingLevelSpread = Math.max(1000, freezingLevelMax - freezingLevelMin);
+  const freezingLevelPad = Math.max(500, freezingLevelSpread * 0.12);
+  const freezingLevelRange = freezingLevelVals.length
+    ? [Math.max(0, freezingLevelMin - freezingLevelPad), freezingLevelMax + freezingLevelPad]
+    : [0, 10000];
 
   const freezeLineShape = {
     type: "line",
@@ -3588,19 +3621,33 @@ function renderForwardChart(forwardHourlyRecords) {
       yaxis: "y3",
       name: "Wind (mph)",
       hovertemplate: "Time %{x}<br>Wind %{y:.1f} mph<extra></extra>"
-    }
+    },
   ];
+  if (hasFreezingLevel) {
+    data.push({
+      x,
+      y: freezingLevel,
+      type: "scatter",
+      mode: "lines",
+      line: { color: "#6b66c4", width: 1.4, dash: "dash" },
+      yaxis: "y4",
+      name: "Freezing Elev. (ft)",
+      hovertemplate: "Time %{x}<br>Freezing elev %{y:.0f} ft<extra></extra>"
+    });
+  }
 
   const layout = {
     barmode: "group",
-    margin: { l: PLOT_LEFT_MARGIN, r: 88, t: 10, b: 36 },
+    margin: { l: PLOT_LEFT_MARGIN, r: hasFreezingLevel ? 140 : 88, t: 10, b: 36 },
     paper_bgcolor: "#ffffff",
     plot_bgcolor: "#ffffff",
     xaxis: {
       range: xRange,
-      showgrid: true,
-      gridcolor: "#e4ebf2",
-      title: "Time"
+      showgrid: false,
+      title: "Time",
+      tick0: noonTick0 || undefined,
+      dtick: 24 * 60 * 60 * 1000,
+      tickformat: "%b %-d<br>%A"
     },
     yaxis: {
       title: "Temperature (F)",
@@ -3620,15 +3667,26 @@ function renderForwardChart(forwardHourlyRecords) {
       overlaying: "y",
       side: "right",
       anchor: "free",
-      position: 0.9,
+      position: hasFreezingLevel ? 0.87 : 0.9,
       range: windRange,
       showgrid: false
     },
-    shapes: [freezeLineShape],
+    shapes: [freezeLineShape, ...midnightShapes],
     legend: { orientation: "h", y: 1.12, x: 0 }
   };
+  if (hasFreezingLevel) {
+    layout.yaxis4 = {
+      title: "Freezing Elev. (ft)",
+      overlaying: "y",
+      side: "right",
+      anchor: "free",
+      position: 0.74,
+      range: freezingLevelRange,
+      showgrid: false
+    };
+  }
 
-  setBaseShapes("forecast-chart", [freezeLineShape]);
+  setBaseShapes("forecast-chart", [freezeLineShape, ...midnightShapes]);
   Plotly.react("forecast-chart", data, layout, getPlotConfig());
 }
 
