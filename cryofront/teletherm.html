@@ -129,6 +129,7 @@ header .subtitle {
 }
 
 .slide-toggle:hover { border-color: var(--accent); }
+.slide-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .slide-toggle .opt {
   position: relative;
@@ -368,20 +369,26 @@ header .subtitle {
 
 /* --- Crosslink --- */
 
-.see-also {
+.site-nav {
   position: absolute;
   top: 0;
   left: 0;
   font-size: 0.75rem;
   color: var(--text-muted);
+  display: flex;
+  gap: 0.15rem;
 }
 
-.see-also a {
+.site-nav a {
   color: var(--text-muted);
   text-decoration: none;
 }
 
-.see-also a:hover { text-decoration: underline; }
+.site-nav a:hover { text-decoration: underline; }
+
+.site-nav .current {
+  opacity: 0.5;
+}
 
 /* --- Footer --- */
 
@@ -492,7 +499,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   #theme-toggle .opt { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
   #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
   #explanation { font-size: 0.8rem; padding: 0.75rem; }
-  .see-also { position: static; margin-bottom: 0.5rem; }
+  .site-nav { position: static; margin-bottom: 0.5rem; justify-content: center; }
 }
 </style>
 </head>
@@ -502,12 +509,12 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <header>
     <h1><svg class="logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="wg" x1="0.5" y1="0" x2="0.5" y2="0.5"><stop offset="0%" stop-color="#f0c040"/><stop offset="100%" stop-color="#e84d60"/></linearGradient><linearGradient id="cg" x1="0.5" y1="0.5" x2="0.5" y2="1"><stop offset="0%" stop-color="#00cfd8"/><stop offset="100%" stop-color="#5b9bd5"/></linearGradient></defs><g stroke-linecap="round" fill="none"><g stroke="url(#wg)" stroke-width="2.2"><line x1="16" y1="4" x2="16" y2="14"/><line x1="16" y1="4" x2="12.5" y2="7.5"/><line x1="16" y1="4" x2="19.5" y2="7.5"/><line x1="8" y1="8" x2="13.5" y2="13.5"/><line x1="24" y1="8" x2="18.5" y2="13.5"/></g><circle cx="16" cy="16" r="2.5" fill="#e84d60" stroke="none"/><g stroke="url(#cg)" stroke-width="2.2"><line x1="16" y1="18" x2="16" y2="28"/><line x1="16" y1="28" x2="12.5" y2="24.5"/><line x1="16" y1="28" x2="19.5" y2="24.5"/><line x1="8" y1="24" x2="13.5" y2="18.5"/><line x1="24" y1="24" x2="18.5" y2="18.5"/></g></g></svg>Teletherm</h1>
     <p class="subtitle">When do the hottest and coldest days fall?</p>
-    <div class="see-also">See also: <a href="index.html">[Cryofront]</a> <a href="thermofront.html">[Thermofront]</a></div>
+    <div class="site-nav"><a href="index.html">[Cryofront]</a> <a href="thermofront.html">[Thermofront]</a> <span class="current">[Teletherm]</span></div>
     <div id="theme-toggle-wrap">
-      <div class="slide-toggle" id="theme-toggle">
+      <div class="slide-toggle" id="theme-toggle" tabindex="0" role="radiogroup" aria-label="Theme">
         <div class="slider"></div>
-        <span class="opt" data-val="dark">Dark</span>
-        <span class="opt" data-val="light">Light</span>
+        <span class="opt" data-val="dark" role="radio" aria-checked="false">Dark</span>
+        <span class="opt" data-val="light" role="radio" aria-checked="false">Light</span>
       </div>
     </div>
   </header>
@@ -515,10 +522,15 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <form id="zip-form">
     <label for="loc-input">City/ZIP:</label>
     <div id="loc-wrap">
-      <input type="text" id="loc-input" placeholder="City or US ZIP code" autocomplete="off" spellcheck="false">
-      <ul id="loc-suggestions"></ul>
+      <input type="text" id="loc-input" placeholder="City or US ZIP code" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="loc-suggestions">
+      <ul id="loc-suggestions" role="listbox"></ul>
     </div>
     <button type="submit" id="go-btn">Go</button>
+    <div class="slide-toggle" id="unit-toggle" tabindex="0" role="radiogroup" aria-label="Temperature unit">
+      <div class="slider"></div>
+      <span class="opt" data-val="F" role="radio" aria-checked="false">°F</span>
+      <span class="opt" data-val="C" role="radio" aria-checked="false">°C</span>
+    </div>
   </form>
 
   <div id="status-area"></div>
@@ -526,7 +538,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <div id="chart-container" style="display:none;">
     <h2 id="location-name"></h2>
     <div id="chart-wrapper">
-      <canvas id="teletherm-chart"></canvas>
+      <canvas id="teletherm-chart" role="img" aria-label="Teletherm scatter chart showing hottest and coldest day dates per year."></canvas>
     </div>
     <div id="chart-legend"></div>
     <button id="export-btn" title="Save as PNG">Save PNG</button>
@@ -536,7 +548,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     <strong>What is a teletherm?</strong> The <em>summer teletherm</em> is the
     calendar date of the year&rsquo;s highest daily high temperature; the
     <em>winter teletherm</em> is the date of the lowest daily low.
-    This chart tracks when those extreme days fall each year, from 1951 through 2025.
+    This chart tracks when those extreme days fall each year, from <span class="start-year"></span> through <span class="end-year"></span>.
     If the red dots drift later, summers are peaking later.
     If the blue dots shift, the coldest day is moving too.
     Dashed lines show the linear trend.
@@ -545,11 +557,11 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     <a href="#" id="details-link">More details&hellip;</a>
   </div>
 
-  <div id="details-modal" style="display:none;">
+  <div id="details-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="details-heading">
     <div id="details-backdrop"></div>
     <div id="details-card">
       <button id="details-close" aria-label="Close">&times;</button>
-      <h3>About Teletherms</h3>
+      <h3 id="details-heading">About Teletherms</h3>
       <p>
         For each calendar year, the <strong>summer teletherm</strong> is the
         date on which the daily high temperature was highest, and the
@@ -561,7 +573,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       </p>
       <h4>Reading the chart</h4>
       <p>
-        The x-axis shows years (1951&ndash;2025). The y-axis shows the day
+        The x-axis shows years (<span class="start-year"></span>&ndash;<span class="end-year"></span>). The y-axis shows the day
         of the year, labeled by month.
         <span style="color:#e84d60;">Red dots</span> mark the warmest day
         each year (highest daily high);
@@ -592,7 +604,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
       <p>
         Daily high and low temperatures come from the
         <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
-        historical archive, covering 1951 through 2025. Only fully completed years are included.
+        historical archive, covering <span class="start-year"></span> through <span class="end-year"></span>. Only fully completed years are included.
       </p>
       <h4>Reference</h4>
       <p>
@@ -631,9 +643,27 @@ const CONFIG = {
 const END_YEAR = new Date().getFullYear() - 1; // only completed years
 const START_YEAR = 1951;
 
+document.querySelectorAll('.start-year').forEach(el => el.textContent = START_YEAR);
+document.querySelectorAll('.end-year').forEach(el => el.textContent = END_YEAR);
+
 let chartInstance = null;
 let lastResults = null;
 let lastLocationName = '';
+let useCelsius = false;
+
+function toDisplay(f) { return useCelsius ? (f - 32) * 5 / 9 : f; }
+function unitLabel() { return useCelsius ? '\u00b0C' : '\u00b0F'; }
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
 
 function isDark() { return !document.documentElement.classList.contains('light'); }
 
@@ -684,9 +714,10 @@ function isoDate(d) {
 }
 
 function dayOfYear(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  return Math.floor((d - jan1) / 86400000) + 1;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const jan1 = Date.UTC(y, 0, 1);
+  const date = Date.UTC(y, m - 1, d);
+  return Math.floor((date - jan1) / 86400000) + 1;
 }
 
 // Shift DOY so Nov 1 (DOY 305) maps to 1, keeping winter days together
@@ -729,7 +760,7 @@ function monthTicks() {
 
 function isZip(s) { return /^\d{5}$/.test(s); }
 
-async function geocodeQuery(query) {
+async function geocodeQuery(query, signal) {
   const key = query.trim().toLowerCase();
   const cacheKey = `geo_${key}`;
   const cached = readCache(cacheKey);
@@ -737,7 +768,7 @@ async function geocodeQuery(query) {
 
   // Strip ", State/Country" suffix — the API only matches city names
   const apiQuery = query.trim().replace(/,.*$/, '').trim();
-  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`);
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`, { signal });
   if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
   const data = await resp.json();
   const results = data.results || [];
@@ -748,14 +779,14 @@ async function geocodeQuery(query) {
   if (zip) {
     for (const r of results) {
       if (r.country_code === 'US' && (r.postcodes || []).includes(zip)) {
-        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude, timezone: r.timezone || 'America/New_York' };
         writeCache(cacheKey, loc);
         return loc;
       }
     }
     // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
     try {
-      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`);
+      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`, { signal });
       if (zResp.ok) {
         const zData = await zResp.json();
         if (zData.places && zData.places.length > 0) {
@@ -764,6 +795,7 @@ async function geocodeQuery(query) {
             name: `${p['place name']}, ${p.state}`,
             lat: parseFloat(p.latitude),
             lon: parseFloat(p.longitude),
+            timezone: 'America/New_York',
           };
           writeCache(cacheKey, loc);
           return loc;
@@ -777,7 +809,7 @@ async function geocodeQuery(query) {
     const r = results[0];
     const isUS = r.country_code === 'US';
     const name = isUS ? `${r.name}, ${r.admin1 || ''}` : `${r.name}, ${r.country || ''}`;
-    const loc = { name, lat: r.latitude, lon: r.longitude };
+    const loc = { name, lat: r.latitude, lon: r.longitude, timezone: r.timezone || 'America/New_York' };
     writeCache(cacheKey, loc);
     return loc;
   }
@@ -797,6 +829,7 @@ async function geocodeSearch(query) {
       countryCode: r.country_code || '',
       lat: r.latitude,
       lon: r.longitude,
+      timezone: r.timezone || 'America/New_York',
     }));
 }
 
@@ -806,7 +839,7 @@ let selectedLoc = null;
 // Weather data fetching
 // =========================================================================
 
-async function fetchYearData(loc, year) {
+async function fetchYearData(loc, year, signal) {
   const lat = loc.lat.toFixed(4);
   const lon = loc.lon.toFixed(4);
   const startDate = `${year}-01-01`;
@@ -820,9 +853,9 @@ async function fetchYearData(loc, year) {
     `&start_date=${startDate}&end_date=${endDate}` +
     `&daily=temperature_2m_max,temperature_2m_min` +
     `&temperature_unit=fahrenheit` +
-    `&timezone=${CONFIG.TIMEZONE}`;
+    `&timezone=${encodeURIComponent(loc.timezone || CONFIG.TIMEZONE)}`;
 
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal });
   if (!resp.ok) throw new Error(`Weather API error (HTTP ${resp.status})`);
   const data = await resp.json();
   if (!data.daily) throw new Error('Unexpected API response');
@@ -1043,7 +1076,7 @@ const highlightPlugin = {
     const seriesName = hoverSeriesIdx === 0 ? 'Warmest day' : 'Coldest day';
 
     const line1 = `${year}${partial ? '*' : ''}  ${seriesName}`;
-    const line2 = `${dateLabel}  (day ${realDoy})  ${temp.toFixed(1)}\u00b0F`;
+    const line2 = `${dateLabel}  (day ${realDoy})  ${toDisplay(temp).toFixed(1)}${unitLabel()}`;
 
     const fontSize1 = 12;
     const fontSize2 = 11;
@@ -1107,13 +1140,40 @@ function renderChart(results, locationName) {
   const warmTrend = cyclicalTrend(trendYears, trendWarm, 365);
   const coldTrend = cyclicalTrend(trendYears, trendCold, 365);
 
+  // Temperature-scaled point colors
+  const dark = isDark();
+  const validWarm = warmTemps.filter(v => v != null);
+  const validCold = coldTemps.filter(v => v != null);
+  const warmMin = Math.min(...validWarm), warmMax = Math.max(...validWarm);
+  const coldMin = Math.min(...validCold), coldMax = Math.max(...validCold);
+
+  function warmHex(temp) {
+    if (temp == null) return t.warmColor;
+    const frac = warmMax > warmMin ? (temp - warmMin) / (warmMax - warmMin) : 0.5;
+    const hue = 30 * (1 - frac);          // 30 (orange) → 0 (red)
+    const sat = 70 + 20 * frac;           // 70–90
+    const lit = dark ? (62 - 8 * frac) : (48 - 8 * frac);  // brighter for cooler, darker for hotter
+    return hslToHex(hue, sat, lit);
+  }
+  function coldHex(temp) {
+    if (temp == null) return t.coldColor;
+    const frac = coldMax > coldMin ? (temp - coldMin) / (coldMax - coldMin) : 0.5;
+    const hue = 240 - 40 * frac;          // 240 (blue) → 200 (cyan)
+    const sat = 65 + 20 * (1 - frac);     // colder = more saturated
+    const lit = dark ? (58 + 10 * frac) : (38 + 14 * frac);  // warmer cold = lighter
+    return hslToHex(hue, sat, lit);
+  }
+
   // Point styling: current year gets hollow circle
-  const warmPointBg = warmDays.map((_, i) => isPartial[i] ? 'transparent' : t.warmColor);
-  const warmPointBorder = warmDays.map((_, i) => t.warmColor);
+  const warmColors = warmTemps.map(warmHex);
+  const coldColors = coldTemps.map(coldHex);
+
+  const warmPointBg = warmColors.map((c, i) => isPartial[i] ? 'transparent' : c);
+  const warmPointBorder = warmColors;
   const warmPointBorderW = warmDays.map((_, i) => isPartial[i] ? 2 : 0);
 
-  const coldPointBg = coldDays.map((_, i) => isPartial[i] ? 'transparent' : t.coldColor);
-  const coldPointBorder = coldDays.map((_, i) => t.coldColor);
+  const coldPointBg = coldColors.map((c, i) => isPartial[i] ? 'transparent' : c);
+  const coldPointBorder = coldColors;
   const coldPointBorderW = coldDays.map((_, i) => isPartial[i] ? 2 : 0);
 
   const datasets = [
@@ -1277,12 +1337,23 @@ function renderChart(results, locationName) {
 // Form submission
 // =========================================================================
 
+let currentRequestId = 0;
+let currentController = null;
+
 document.getElementById('zip-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   closeSuggestions();
   const query = document.getElementById('loc-input').value.trim();
 
   if (!query) { showError('Enter a city or US ZIP code.'); return; }
+
+  // Abort any in-flight request
+  currentController?.abort();
+  const requestId = ++currentRequestId;
+  const controller = new AbortController();
+  currentController = controller;
+  const signal = controller.signal;
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   const goBtn = document.getElementById('go-btn');
   goBtn.disabled = true;
@@ -1292,7 +1363,7 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
   try {
     let location;
     if (selectedLoc) { location = selectedLoc; selectedLoc = null; }
-    else { location = await geocodeQuery(query); }
+    else { location = await geocodeQuery(query, signal); }
 
     const totalYears = END_YEAR - START_YEAR + 1;
     let done = 0;
@@ -1302,7 +1373,7 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     const promises = [];
     for (let y = START_YEAR; y <= END_YEAR; y++) {
       promises.push(
-        fetchYearData(location, y).then(data => {
+        fetchYearData(location, y, signal).then(data => {
           yearDataMap[y] = data;
           done++;
           showStatus(`${location.name} \u2014 fetching data\u2026 (${done}/${totalYears})`);
@@ -1311,6 +1382,9 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     }
 
     await Promise.allSettled(promises);
+
+    // Stale request — a newer submit has taken over
+    if (requestId !== currentRequestId) return;
 
     if (Object.keys(yearDataMap).length === 0) {
       throw new Error('Could not retrieve weather data for any year.');
@@ -1323,17 +1397,21 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     renderChart(results, location.name);
 
   } catch (err) {
+    if (err.name === 'AbortError') return; // cancelled or timed out
+    if (requestId !== currentRequestId) return;
     showError(err.message);
   } finally {
-    goBtn.disabled = false;
+    clearTimeout(timeout);
+    if (requestId === currentRequestId) goBtn.disabled = false;
   }
 });
 
 // Default location (Burlington, VT — homage to the Dodds team at UVM)
 document.getElementById('loc-input').value = '05401';
 
-// Auto-load from URL query parameter (?zip=...)
-const urlZip = new URLSearchParams(window.location.search).get('zip');
+// Auto-load from URL query parameter (?zip=... or ?q=...)
+const urlParams = new URLSearchParams(window.location.search);
+const urlZip = urlParams.get('q') || urlParams.get('zip');
 if (urlZip) {
   document.getElementById('loc-input').value = urlZip;
   document.getElementById('zip-form').requestSubmit();
@@ -1352,21 +1430,25 @@ function closeSuggestions() {
   sugList.style.display = 'none';
   sugList.innerHTML = '';
   acIdx = -1;
+  locInput.setAttribute('aria-expanded', 'false');
+  locInput.removeAttribute('aria-activedescendant');
 }
 
 function showSuggestions(items) {
   if (items.length === 0) { closeSuggestions(); return; }
   sugList.innerHTML = '';
   acIdx = -1;
-  items.forEach((item) => {
+  items.forEach((item, i) => {
     const li = document.createElement('li');
+    li.id = `loc-opt-${i}`;
+    li.setAttribute('role', 'option');
     const isUS = item.countryCode === 'US';
     const sub = isUS ? item.admin1 : (item.admin1 ? `${item.admin1}, ${item.country}` : item.country);
     const displayName = isUS ? `${item.name}, ${item.admin1}` : `${item.name}, ${item.country}`;
     li.innerHTML = `${item.name}<span class="loc-sub">${sub}</span>`;
     li.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      selectedLoc = { name: displayName, lat: item.lat, lon: item.lon };
+      selectedLoc = { name: displayName, lat: item.lat, lon: item.lon, timezone: item.timezone };
       locInput.value = displayName;
       closeSuggestions();
       document.getElementById('zip-form').requestSubmit();
@@ -1374,6 +1456,7 @@ function showSuggestions(items) {
     sugList.appendChild(li);
   });
   sugList.style.display = 'block';
+  locInput.setAttribute('aria-expanded', 'true');
 }
 
 locInput.addEventListener('input', () => {
@@ -1394,10 +1477,12 @@ locInput.addEventListener('keydown', (e) => {
     e.preventDefault();
     acIdx = Math.min(acIdx + 1, items.length - 1);
     items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+    locInput.setAttribute('aria-activedescendant', `loc-opt-${acIdx}`);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     acIdx = Math.max(acIdx - 1, 0);
     items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+    locInput.setAttribute('aria-activedescendant', `loc-opt-${acIdx}`);
   } else if (e.key === 'Enter' && acIdx >= 0) {
     e.preventDefault();
     items[acIdx].dispatchEvent(new MouseEvent('mousedown'));
@@ -1431,7 +1516,9 @@ const themeToggle = document.getElementById('theme-toggle');
 function applyThemeState() {
   const val = isDark() ? 'dark' : 'light';
   themeToggle.querySelectorAll('.opt').forEach(o => {
-    o.classList.toggle('active', o.dataset.val === val);
+    const active = o.dataset.val === val;
+    o.classList.toggle('active', active);
+    o.setAttribute('aria-checked', String(active));
   });
   updateSlider(themeToggle);
 }
@@ -1450,6 +1537,40 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem('tt_theme', mode);
   applyThemeState();
   if (lastResults) renderChart(lastResults, lastLocationName);
+});
+themeToggle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); themeToggle.click(); }
+});
+
+// =========================================================================
+// Unit toggle (°F / °C)
+// =========================================================================
+
+const unitToggle = document.getElementById('unit-toggle');
+
+function applyUnitState() {
+  const val = useCelsius ? 'C' : 'F';
+  unitToggle.querySelectorAll('.opt').forEach(o => {
+    const active = o.dataset.val === val;
+    o.classList.toggle('active', active);
+    o.setAttribute('aria-checked', String(active));
+  });
+  updateSlider(unitToggle);
+}
+
+if (localStorage.getItem('tt_unit') === 'C') {
+  useCelsius = true;
+}
+applyUnitState();
+
+unitToggle.addEventListener('click', () => {
+  useCelsius = !useCelsius;
+  localStorage.setItem('tt_unit', useCelsius ? 'C' : 'F');
+  applyUnitState();
+  if (lastResults) renderChart(lastResults, lastLocationName);
+});
+unitToggle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); unitToggle.click(); }
 });
 
 // =========================================================================
@@ -1501,10 +1622,23 @@ document.getElementById('export-btn').addEventListener('click', () => {
   ctx.textAlign = 'center';
 
   // Draw colored dots + labels
-  const capText = '\u25cf Warmest day (highest daily high)    \u25cf Coldest day (lowest daily low)    Dashed: linear trends';
-  // Measure to position colored dots
-  ctx.fillStyle = dark ? '#999' : '#777';
-  ctx.fillText(capText, totalW / 2, capY);
+  const capGray = dark ? '#999' : '#777';
+  const segments = [
+    { text: '\u25cf', color: t.warmColor },
+    { text: ' Warmest day (highest daily high)    ', color: capGray },
+    { text: '\u25cf', color: t.coldColor },
+    { text: ' Coldest day (lowest daily low)    Dashed: linear trends', color: capGray },
+  ];
+  // Measure total width to center
+  const capTotalW = segments.reduce((sum, s) => sum + ctx.measureText(s.text).width, 0);
+  let capX = (totalW - capTotalW) / 2;
+  ctx.textAlign = 'left';
+  for (const seg of segments) {
+    ctx.fillStyle = seg.color;
+    ctx.fillText(seg.text, capX, capY);
+    capX += ctx.measureText(seg.text).width;
+  }
+  ctx.textAlign = 'center';
 
   // Footer
   const footSize = Math.round(9 * dpr);
@@ -1530,23 +1664,45 @@ document.getElementById('export-btn').addEventListener('click', () => {
 // =========================================================================
 
 const detailsModal = document.getElementById('details-modal');
+const detailsClose = document.getElementById('details-close');
+let prevFocus = null;
+
+function openModal() {
+  prevFocus = document.activeElement;
+  detailsModal.style.display = '';
+  detailsClose.focus();
+}
+
+function closeModal() {
+  detailsModal.style.display = 'none';
+  if (prevFocus) { prevFocus.focus(); prevFocus = null; }
+}
 
 document.getElementById('details-link').addEventListener('click', (e) => {
   e.preventDefault();
-  detailsModal.style.display = '';
+  openModal();
 });
 
-document.getElementById('details-backdrop').addEventListener('click', () => {
-  detailsModal.style.display = 'none';
-});
-
-document.getElementById('details-close').addEventListener('click', () => {
-  detailsModal.style.display = 'none';
-});
+document.getElementById('details-backdrop').addEventListener('click', closeModal);
+detailsClose.addEventListener('click', closeModal);
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && detailsModal.style.display !== 'none') {
-    detailsModal.style.display = 'none';
+    closeModal();
+  }
+});
+
+// Focus trap: cycle Tab within modal
+detailsModal.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const focusable = detailsModal.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+  } else {
+    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 });
 </script>

@@ -129,6 +129,7 @@ header .subtitle {
 }
 
 .slide-toggle:hover { border-color: var(--accent); }
+.slide-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .slide-toggle .opt {
   position: relative;
@@ -548,20 +549,26 @@ header .subtitle {
 
 /* --- Crosslink --- */
 
-.see-also {
+.site-nav {
   position: absolute;
   top: 0;
   left: 0;
   font-size: 0.75rem;
   color: var(--text-muted);
+  display: flex;
+  gap: 0.15rem;
 }
 
-.see-also a {
+.site-nav a {
   color: var(--text-muted);
   text-decoration: none;
 }
 
-.see-also a:hover { text-decoration: underline; }
+.site-nav a:hover { text-decoration: underline; }
+
+.site-nav .current {
+  opacity: 0.5;
+}
 
 /* --- Footer --- */
 
@@ -679,7 +686,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   #details-card { padding: 1.5rem 1rem; font-size: 0.84rem; }
   #explanation { font-size: 0.8rem; padding: 0.75rem; }
   #stats-box { font-size: 0.8rem; padding: 0.75rem 1rem; }
-  .see-also { position: static; margin-bottom: 0.5rem; }
+  .site-nav { position: static; margin-bottom: 0.5rem; justify-content: center; }
 }
 </style>
 </head>
@@ -689,12 +696,12 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <header>
     <h1><svg class="logo-icon" viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff8c42"/><stop offset="100%" stop-color="#d64545"/></linearGradient></defs><g stroke="url(#lg)" stroke-linecap="round" fill="none"><g stroke-width="2.8"><line x1="16" y1="2" x2="16" y2="18"/><line x1="16" y1="2" x2="11.8" y2="7"/><line x1="16" y1="2" x2="20.2" y2="7"/><line x1="16" y1="9" x2="12.8" y2="12"/><line x1="16" y1="9" x2="19.2" y2="12"/></g><circle cx="16" cy="24" r="5" stroke="url(#lg)" stroke-width="2.2" fill="url(#lg)"/><g stroke-width="2.2"><line x1="3" y1="24" x2="8.5" y2="24"/><line x1="23.5" y1="24" x2="29" y2="24"/><line x1="7.3" y1="17.3" x2="11.3" y2="20"/><line x1="24.7" y1="17.3" x2="20.7" y2="20"/><line x1="7.3" y1="30.7" x2="11.3" y2="28"/><line x1="24.7" y1="30.7" x2="20.7" y2="28"/><line x1="16" y1="31.5" x2="16" y2="34"/></g></g></svg>Thermofront</h1>
     <p class="subtitle">The Pareto frontier of sustained heat.</p>
-    <div class="see-also">See also: <a href="index.html">[Cryofront]</a> <a href="teletherm.html">[Teletherm]</a></div>
+    <div class="site-nav"><a href="index.html">[Cryofront]</a> <span class="current">[Thermofront]</span> <a href="teletherm.html">[Teletherm]</a></div>
     <div id="theme-toggle-wrap">
-      <div class="slide-toggle" id="theme-toggle">
+      <div class="slide-toggle" id="theme-toggle" tabindex="0" role="radiogroup" aria-label="Theme">
         <div class="slider"></div>
-        <span class="opt" data-val="dark">Dark</span>
-        <span class="opt" data-val="light">Light</span>
+        <span class="opt" data-val="dark" role="radio" aria-checked="false">Dark</span>
+        <span class="opt" data-val="light" role="radio" aria-checked="false">Light</span>
       </div>
     </div>
   </header>
@@ -702,19 +709,19 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <form id="zip-form">
     <label for="loc-input">City/ZIP:</label>
     <div id="loc-wrap">
-      <input type="text" id="loc-input" placeholder="City or US ZIP code" autocomplete="off" spellcheck="false">
-      <ul id="loc-suggestions"></ul>
+      <input type="text" id="loc-input" placeholder="City or US ZIP code" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="loc-suggestions">
+      <ul id="loc-suggestions" role="listbox"></ul>
     </div>
     <button type="submit" id="go-btn">Go</button>
-    <div class="slide-toggle" id="unit-toggle">
+    <div class="slide-toggle" id="unit-toggle" tabindex="0" role="radiogroup" aria-label="Temperature unit">
       <div class="slider"></div>
-      <span class="opt" data-val="F">°F</span>
-      <span class="opt" data-val="C">°C</span>
+      <span class="opt" data-val="F" role="radio" aria-checked="false">°F</span>
+      <span class="opt" data-val="C" role="radio" aria-checked="false">°C</span>
     </div>
-    <div class="slide-toggle" id="range-toggle">
+    <div class="slide-toggle" id="range-toggle" tabindex="0" role="radiogroup" aria-label="Season range">
       <div class="slider"></div>
-      <span class="opt" data-val="10">10 year</span>
-      <span class="opt" data-val="50">50 year</span>
+      <span class="opt" data-val="10" role="radio" aria-checked="false">10 year</span>
+      <span class="opt" data-val="50" role="radio" aria-checked="false">50 year</span>
     </div>
     <div id="checkbox-row">
       <label id="lastk-label"><input type="checkbox" id="lastk-toggle"> Last <em>k</em> days</label>
@@ -728,7 +735,7 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
   <div id="chart-container" style="display:none;">
     <h2 id="location-name"></h2>
     <div id="chart-wrapper">
-      <canvas id="thermofront-chart"></canvas>
+      <canvas id="thermofront-chart" role="img" aria-label="Thermofront temperature chart. See the statistics section below for data details."></canvas>
     </div>
     <div id="chart-legend"></div>
     <button id="export-btn" title="Save as PNG">Save PNG</button>
@@ -755,11 +762,11 @@ footer a:hover { color: var(--footer-link-hover); text-decoration: underline; }
     <a href="#" id="details-link">More details&hellip;</a>
   </div>
 
-  <div id="details-modal" style="display:none;">
+  <div id="details-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="details-heading">
     <div id="details-backdrop"></div>
     <div id="details-card">
       <button id="details-close" aria-label="Close">&times;</button>
-      <h3>How the Thermofront Works</h3>
+      <h3 id="details-heading">How the Thermofront Works</h3>
       <p>
         Pick a number of days&mdash;say 7. Now look at every 7-day stretch during
         the summer and ask: what was the <em>lowest</em> temperature during that stretch?
@@ -937,7 +944,7 @@ function isoDate(d) {
 
 function isZip(s) { return /^\d{5}$/.test(s); }
 
-async function geocodeQuery(query) {
+async function geocodeQuery(query, signal) {
   const key = query.trim().toLowerCase();
   const cacheKey = `geo_${key}`;
   const cached = readCache(cacheKey);
@@ -945,7 +952,7 @@ async function geocodeQuery(query) {
 
   // Strip ", State/Country" suffix — the API only matches city names
   const apiQuery = query.trim().replace(/,.*$/, '').trim();
-  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`);
+  const resp = await fetch(`${CONFIG.GEOCODING_URL}?name=${encodeURIComponent(apiQuery)}&count=10&language=en&format=json`, { signal });
   if (!resp.ok) throw new Error(`Geocoding failed (HTTP ${resp.status})`);
   const data = await resp.json();
   const results = data.results || [];
@@ -956,14 +963,14 @@ async function geocodeQuery(query) {
   if (zip) {
     for (const r of results) {
       if (r.country_code === 'US' && (r.postcodes || []).includes(zip)) {
-        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude };
+        const loc = { name: `${r.name}, ${r.admin1 || ''}`, lat: r.latitude, lon: r.longitude, timezone: r.timezone || 'America/New_York' };
         writeCache(cacheKey, loc);
         return loc;
       }
     }
     // ZIP fallback: try Zippopotam.us when Open-Meteo has no US match
     try {
-      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`);
+      const zResp = await fetch(`https://api.zippopotam.us/us/${zip}`, { signal });
       if (zResp.ok) {
         const zData = await zResp.json();
         if (zData.places && zData.places.length > 0) {
@@ -972,6 +979,7 @@ async function geocodeQuery(query) {
             name: `${p['place name']}, ${p.state}`,
             lat: parseFloat(p.latitude),
             lon: parseFloat(p.longitude),
+            timezone: 'America/New_York',
           };
           writeCache(cacheKey, loc);
           return loc;
@@ -985,7 +993,7 @@ async function geocodeQuery(query) {
     const r = results[0];
     const isUS = r.country_code === 'US';
     const name = isUS ? `${r.name}, ${r.admin1 || ''}` : `${r.name}, ${r.country || ''}`;
-    const loc = { name, lat: r.latitude, lon: r.longitude };
+    const loc = { name, lat: r.latitude, lon: r.longitude, timezone: r.timezone || 'America/New_York' };
     writeCache(cacheKey, loc);
     return loc;
   }
@@ -1006,6 +1014,7 @@ async function geocodeSearch(query) {
       countryCode: r.country_code || '',
       lat: r.latitude,
       lon: r.longitude,
+      timezone: r.timezone || 'America/New_York',
     }));
 }
 
@@ -1036,7 +1045,7 @@ function makeSummerSeasons(count, ref) {
 // Weather data
 // =========================================================================
 
-async function fetchTodayObservedLow(loc) {
+async function fetchTodayObservedLow(loc, signal) {
   const lat = loc.lat.toFixed(4);
   const lon = loc.lon.toFixed(4);
   const cacheKey = `tl_${lat}_${lon}`;
@@ -1046,10 +1055,11 @@ async function fetchTodayObservedLow(loc) {
     return cached.value;
   }
 
+  const tz = encodeURIComponent(loc.timezone || CONFIG.TIMEZONE);
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&hourly=temperature_2m&temperature_unit=fahrenheit` +
-    `&timezone=${CONFIG.TIMEZONE}&past_hours=24&forecast_hours=0`;
-  const resp = await fetch(url);
+    `&timezone=${tz}&past_hours=24&forecast_hours=0`;
+  const resp = await fetch(url, { signal });
   if (!resp.ok) return null;
   const data = await resp.json();
   if (!data.hourly) return null;
@@ -1071,7 +1081,7 @@ async function fetchTodayObservedLow(loc) {
   return low;
 }
 
-async function fetchDailyLows(loc, startDate, endDate) {
+async function fetchDailyLows(loc, startDate, endDate, signal) {
   const lat = loc.lat.toFixed(4);
   const lon = loc.lon.toFixed(4);
   const today = new Date();
@@ -1092,12 +1102,13 @@ async function fetchDailyLows(loc, startDate, endDate) {
   let temps = readCache(cacheKey, isRecent ? CONFIG.CACHE_MAX_AGE_MS : undefined);
 
   if (!temps) {
+    const tz = encodeURIComponent(loc.timezone || CONFIG.TIMEZONE);
     const url = `${CONFIG.ARCHIVE_URL}?latitude=${lat}&longitude=${lon}` +
       `&start_date=${s}&end_date=${e}` +
       `&daily=temperature_2m_min&temperature_unit=fahrenheit` +
-      `&timezone=${CONFIG.TIMEZONE}`;
+      `&timezone=${tz}`;
 
-    const resp = await fetch(url);
+    const resp = await fetch(url, { signal });
     if (!resp.ok) throw new Error(`Weather API error (HTTP ${resp.status})`);
     const data = await resp.json();
     if (!data.daily) throw new Error('Unexpected API response');
@@ -1113,7 +1124,7 @@ async function fetchDailyLows(loc, startDate, endDate) {
   }
 
   if (endsToday) {
-    const todayLow = await fetchTodayObservedLow(loc);
+    const todayLow = await fetchTodayObservedLow(loc, signal);
     if (todayLow !== null) temps = [...temps, todayLow];
   }
 
@@ -1215,6 +1226,14 @@ function gradient50Hex(index, total, dark) {
   const hue = 220 * (1 - t);
   const sat = 65 + 15 * t;
   const lit = dark ? (55 + 10 * t) : (40 + 10 * t);
+  return hslToHex(hue, sat, lit);
+}
+
+function gradient10Hex(index, total, dark) {
+  const t = total <= 1 ? 0 : index / (total - 1);
+  const hue = (270 - 300 * t + 360) % 360;   // 270 → 330 → … → 0 → … → 330 wrapping blue‑purple‑red‑orange‑yellow‑green
+  const sat = 60 + 20 * Math.sin(t * Math.PI);
+  const lit = dark ? (58 + 8 * Math.sin(t * Math.PI)) : (38 + 12 * Math.sin(t * Math.PI));
   return hslToHex(hue, sat, lit);
 }
 
@@ -1491,6 +1510,8 @@ function renderChart(allResults, locationName) {
   const histCount = displayResults.length - 1;
 
   // Compute per-season records: for each season & k, is it the max across all displayed?
+  // Use epsilon tolerance so near-ties (within 0.05°F) both count as records
+  const REC_EPS = 0.05;
   const allRecords = displayResults.map((r, idx) => {
     const rec = new Array(CONFIG.MAX_K).fill(false);
     for (let ki = 0; ki < CONFIG.MAX_K; ki++) {
@@ -1500,7 +1521,7 @@ function renderChart(allResults, locationName) {
       for (let s = 0; s < displayResults.length; s++) {
         if (s === idx) continue;
         const other = displayResults[s].v[ki];
-        if (other != null && other >= val) { isMax = false; break; }
+        if (other != null && other > val + REC_EPS) { isMax = false; break; }
       }
       rec[ki] = isMax;
     }
@@ -1510,7 +1531,7 @@ function renderChart(allResults, locationName) {
   const datasets = displayResults.map((r, idx) => {
     const isCurrent = idx === displayResults.length - 1;
     const baseColor = isCurrent ? t.currentLine
-      : is50 ? gradient50Hex(idx, histCount, dark) : COLORS[idx % COLORS.length];
+      : is50 ? gradient50Hex(idx, histCount, dark) : gradient10Hex(idx, histCount, dark);
     const displayData = r.v.slice(0, CONFIG.MAX_K).map(toDisplay);
     const ds = {
       label: r.season.label,
@@ -1632,15 +1653,21 @@ function renderChart(allResults, locationName) {
     if (pinnedSets.has(dsIndex)) {
       pinnedSets.delete(dsIndex);
       el.classList.remove('pinned');
+      el.setAttribute('aria-pressed', 'false');
     } else {
       pinnedSets.add(dsIndex);
       el.classList.add('pinned');
+      el.setAttribute('aria-pressed', 'true');
     }
     // Toggle has-pins class on legend container
     legendEl.classList.toggle('has-pins', pinnedSets.size > 0);
     highlightIndex = -1;
     hoverDataIdx = -1;
     applyHighlight(chartInstance, -1);
+  };
+
+  const legendKeyHandler = (el) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
   };
 
   if (is50) {
@@ -1650,11 +1677,15 @@ function renderChart(allResults, locationName) {
       if (ds._isLastK) return;
       const cell = document.createElement('span');
       cell.className = 'leg-cell' + (ds._isCurrent ? ' current' : '');
-      // Short label: "75–76" from "Winter 1975-76"
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('aria-pressed', 'false');
+      // Short label: "75–76" from "Summer 1975-76"
       const tag = ds.label.replace('Summer ', '').replace(/\d{2}(\d{2})-(\d{2})/, '$1\u2013$2');
       cell.innerHTML = `<span class="leg-dot" style="background:${ds._baseColor}"></span>${tag}`;
       cell.title = ds.label;
       cell.addEventListener('click', pinClickHandler(dsIndex, cell));
+      cell.addEventListener('keydown', legendKeyHandler(cell));
       // Hover preview: highlight line on chart without pinning
       cell.addEventListener('mouseenter', () => {
         if (pinnedSets.size === 0) {
@@ -1677,9 +1708,13 @@ function renderChart(allResults, locationName) {
       if (ds._isLastK) return;
       const span = document.createElement('span');
       span.className = 'leg-item' + (ds._isCurrent ? ' current' : '');
+      span.setAttribute('tabindex', '0');
+      span.setAttribute('role', 'button');
+      span.setAttribute('aria-pressed', 'false');
       const tag = ds.label.replace('Summer ', '');
       span.innerHTML = `<span class="leg-swatch" style="background:${ds._baseColor}"></span>${tag}`;
       span.addEventListener('click', pinClickHandler(dsIndex, span));
+      span.addEventListener('keydown', legendKeyHandler(span));
       legendEl.appendChild(span);
     });
   }
@@ -1689,7 +1724,10 @@ function renderChart(allResults, locationName) {
   canvas.onclick = (e) => {
     if (pinnedSets.size > 0) {
       pinnedSets.clear();
-      legendEl.querySelectorAll('.pinned').forEach(el => el.classList.remove('pinned'));
+      legendEl.querySelectorAll('.pinned').forEach(el => {
+        el.classList.remove('pinned');
+        el.setAttribute('aria-pressed', 'false');
+      });
       legendEl.classList.remove('has-pins');
       highlightIndex = -1;
       hoverDataIdx = -1;
@@ -1823,12 +1861,12 @@ function updateStats(allResults, locationName) {
 // Main
 // =========================================================================
 
-async function fetchSeasonResults(location, count) {
+async function fetchSeasonResults(location, count, signal) {
   const seasons = makeSummerSeasons(count);
   let done = 0;
 
   const promises = seasons.map(async (season, idx) => {
-    const temps = await fetchDailyLows(location, season.start, season.end);
+    const temps = await fetchDailyLows(location, season.start, season.end, signal);
     done++;
     showStatus(`${location.name} \u2014 fetching weather data\u2026 (${done}/${seasons.length})`);
     const tc = computeThermofront(temps);
@@ -1849,6 +1887,9 @@ async function fetchSeasonResults(location, count) {
   return results;
 }
 
+let currentRequestId = 0;
+let currentController = null;
+
 document.getElementById('zip-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   closeSuggestions();
@@ -1858,6 +1899,14 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     showError('Enter a city or US ZIP code.');
     return;
   }
+
+  // Abort any in-flight request
+  currentController?.abort();
+  const requestId = ++currentRequestId;
+  const controller = new AbortController();
+  currentController = controller;
+  const signal = controller.signal;
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   const goBtn = document.getElementById('go-btn');
   goBtn.disabled = true;
@@ -1870,19 +1919,22 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
       location = selectedLoc;
       selectedLoc = null;
     } else {
-      location = await geocodeQuery(query);
+      location = await geocodeQuery(query, signal);
     }
     showStatus(`${location.name} \u2014 fetching weather data\u2026`);
 
-    const results = await fetchSeasonResults(location, numSeasons);
+    const results = await fetchSeasonResults(location, numSeasons, signal);
 
     // Fetch last-k-days data (last 42 days, always through today)
     const lkEnd = new Date();
     const lkStart = new Date(lkEnd);
     lkStart.setDate(lkStart.getDate() - (CONFIG.MAX_K - 1));
-    const lkTemps = await fetchDailyLows(location, lkStart, lkEnd);
+    const lkTemps = await fetchDailyLows(location, lkStart, lkEnd, signal);
     lastKData = computeLastK(lkTemps);
     lastKDataNoToday = computeLastK(lkTemps.slice(0, -1));
+
+    // Stale request — a newer submit has taken over
+    if (requestId !== currentRequestId) return;
 
     // Cache results
     cachedLocation = location;
@@ -1896,17 +1948,21 @@ document.getElementById('zip-form').addEventListener('submit', async (e) => {
     updateStats(results, location.name);
 
   } catch (err) {
+    if (err.name === 'AbortError') return; // cancelled or timed out
+    if (requestId !== currentRequestId) return;
     showError(err.message);
   } finally {
-    goBtn.disabled = false;
+    clearTimeout(timeout);
+    if (requestId === currentRequestId) goBtn.disabled = false;
   }
 });
 
 // Pre-fill with default ZIP
 document.getElementById('loc-input').value = '06515';
 
-// Auto-load from URL query parameter (?zip=...)
-const urlZip = new URLSearchParams(window.location.search).get('zip');
+// Auto-load from URL query parameter (?zip=... or ?q=...)
+const urlParams = new URLSearchParams(window.location.search);
+const urlZip = urlParams.get('q') || urlParams.get('zip');
 if (urlZip) {
   document.getElementById('loc-input').value = urlZip;
   document.getElementById('zip-form').requestSubmit();
@@ -1925,6 +1981,8 @@ function closeSuggestions() {
   sugList.style.display = 'none';
   sugList.innerHTML = '';
   acIdx = -1;
+  locInput.setAttribute('aria-expanded', 'false');
+  locInput.removeAttribute('aria-activedescendant');
 }
 
 function showSuggestions(items) {
@@ -1933,13 +1991,15 @@ function showSuggestions(items) {
   acIdx = -1;
   items.forEach((item, i) => {
     const li = document.createElement('li');
+    li.id = `loc-opt-${i}`;
+    li.setAttribute('role', 'option');
     const isUS = item.countryCode === 'US';
     const sub = isUS ? item.admin1 : (item.admin1 ? `${item.admin1}, ${item.country}` : item.country);
     const displayName = isUS ? `${item.name}, ${item.admin1}` : `${item.name}, ${item.country}`;
     li.innerHTML = `${item.name}<span class="loc-sub">${sub}</span>`;
     li.addEventListener('mousedown', (e) => {
       e.preventDefault(); // don't blur input
-      selectedLoc = { name: displayName, lat: item.lat, lon: item.lon };
+      selectedLoc = { name: displayName, lat: item.lat, lon: item.lon, timezone: item.timezone };
       locInput.value = displayName;
       closeSuggestions();
       document.getElementById('zip-form').requestSubmit();
@@ -1947,6 +2007,7 @@ function showSuggestions(items) {
     sugList.appendChild(li);
   });
   sugList.style.display = 'block';
+  locInput.setAttribute('aria-expanded', 'true');
 }
 
 locInput.addEventListener('input', () => {
@@ -1969,10 +2030,12 @@ locInput.addEventListener('keydown', (e) => {
     e.preventDefault();
     acIdx = Math.min(acIdx + 1, items.length - 1);
     items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+    locInput.setAttribute('aria-activedescendant', `loc-opt-${acIdx}`);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     acIdx = Math.max(acIdx - 1, 0);
     items.forEach((li, i) => li.classList.toggle('active', i === acIdx));
+    locInput.setAttribute('aria-activedescendant', `loc-opt-${acIdx}`);
   } else if (e.key === 'Enter' && acIdx >= 0) {
     e.preventDefault();
     items[acIdx].dispatchEvent(new MouseEvent('mousedown'));
@@ -2008,7 +2071,9 @@ const themeToggle = document.getElementById('theme-toggle');
 function applyThemeState() {
   const val = isDark() ? 'dark' : 'light';
   themeToggle.querySelectorAll('.opt').forEach(o => {
-    o.classList.toggle('active', o.dataset.val === val);
+    const active = o.dataset.val === val;
+    o.classList.toggle('active', active);
+    o.setAttribute('aria-checked', String(active));
   });
   updateSlider(themeToggle);
 }
@@ -2030,6 +2095,9 @@ themeToggle.addEventListener('click', () => {
     renderChart(lastResults, lastLocationName);
   }
 });
+themeToggle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); themeToggle.click(); }
+});
 
 // =========================================================================
 // Unit toggle (°F / °C)
@@ -2040,7 +2108,9 @@ const unitToggle = document.getElementById('unit-toggle');
 function applyUnitState() {
   const val = useCelsius ? 'C' : 'F';
   unitToggle.querySelectorAll('.opt').forEach(o => {
-    o.classList.toggle('active', o.dataset.val === val);
+    const active = o.dataset.val === val;
+    o.classList.toggle('active', active);
+    o.setAttribute('aria-checked', String(active));
   });
   updateSlider(unitToggle);
 }
@@ -2059,6 +2129,9 @@ unitToggle.addEventListener('click', () => {
     renderChart(lastResults, lastLocationName);
   }
 });
+unitToggle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); unitToggle.click(); }
+});
 
 // ── Range toggle (10y / 50y) ──────────────────────────────────────────
 const rangeToggle = document.getElementById('range-toggle');
@@ -2066,7 +2139,9 @@ const rangeToggle = document.getElementById('range-toggle');
 function applyRangeState() {
   const val = String(numSeasons);
   rangeToggle.querySelectorAll('.opt').forEach(o => {
-    o.classList.toggle('active', o.dataset.val === val);
+    const active = o.dataset.val === val;
+    o.classList.toggle('active', active);
+    o.setAttribute('aria-checked', String(active));
   });
   updateSlider(rangeToggle);
 }
@@ -2117,6 +2192,9 @@ rangeToggle.addEventListener('click', async () => {
     goBtn.disabled = false;
   }
 });
+rangeToggle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rangeToggle.click(); }
+});
 
 // ── "Last k days" checkbox ────────────────────────────────────────────
 document.getElementById('lastk-toggle').addEventListener('change', (e) => {
@@ -2127,11 +2205,11 @@ document.getElementById('lastk-toggle').addEventListener('change', (e) => {
 });
 
 // ── "Include current season" checkbox ──────────────────────────────────
-// Set dynamic label showing current season (e.g. "Include 25-26")
+// Set dynamic label showing current season (e.g. "Include 2025-26")
 {
   const now = new Date();
   const cy = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
-  const tag = `${String(cy % 100).padStart(2, '0')}-${String((cy + 1) % 100).padStart(2, '0')}`;
+  const tag = `${cy}-${String((cy + 1) % 100).padStart(2, '0')}`;
   const lbl = document.getElementById('incl-current-label');
   lbl.childNodes[lbl.childNodes.length - 1].textContent = ` Include ${tag}`;
 }
@@ -2351,23 +2429,45 @@ document.getElementById('export-btn').addEventListener('click', () => {
 
 // ── Details modal ─────────────────────────────────────────────────────
 const detailsModal = document.getElementById('details-modal');
+const detailsClose = document.getElementById('details-close');
+let prevFocus = null;
+
+function openModal() {
+  prevFocus = document.activeElement;
+  detailsModal.style.display = '';
+  detailsClose.focus();
+}
+
+function closeModal() {
+  detailsModal.style.display = 'none';
+  if (prevFocus) { prevFocus.focus(); prevFocus = null; }
+}
 
 document.getElementById('details-link').addEventListener('click', (e) => {
   e.preventDefault();
-  detailsModal.style.display = '';
+  openModal();
 });
 
-document.getElementById('details-backdrop').addEventListener('click', () => {
-  detailsModal.style.display = 'none';
-});
-
-document.getElementById('details-close').addEventListener('click', () => {
-  detailsModal.style.display = 'none';
-});
+document.getElementById('details-backdrop').addEventListener('click', closeModal);
+detailsClose.addEventListener('click', closeModal);
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && detailsModal.style.display !== 'none') {
-    detailsModal.style.display = 'none';
+    closeModal();
+  }
+});
+
+// Focus trap: cycle Tab within modal
+detailsModal.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const focusable = detailsModal.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+  } else {
+    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 });
 
