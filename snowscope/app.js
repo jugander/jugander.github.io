@@ -1,5 +1,4 @@
 const statusEl = document.getElementById("status");
-const requestNoticesEl = document.getElementById("request-notices");
 const formEl = document.getElementById("query-form");
 const metaEl = document.getElementById("meta");
 const summaryEl = document.getElementById("summary");
@@ -536,20 +535,6 @@ function isAbortError(err) {
 
 function setStatus(text) {
   statusEl.textContent = text;
-}
-
-function renderRequestNotices(lines = []) {
-  if (!requestNoticesEl) {
-    return;
-  }
-  const unique = [...new Set((Array.isArray(lines) ? lines : []).filter((line) => typeof line === "string" && line.trim()))];
-  if (!unique.length) {
-    requestNoticesEl.hidden = true;
-    requestNoticesEl.innerHTML = "";
-    return;
-  }
-  requestNoticesEl.hidden = false;
-  requestNoticesEl.innerHTML = unique.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
 }
 
 function updateStationPendingVisual() {
@@ -2841,10 +2826,15 @@ function formatAgeMins(ageMins) {
   return `${(hours / 24).toFixed(1)} d`;
 }
 
-function renderViewModeBanner(modeInfo, stationObs = null) {
+function renderViewModeBanner(modeInfo, stationObs = null, options = {}) {
   if (!viewModeBannerEl) {
     return;
   }
+
+  const warnings = Array.isArray(options?.warnings)
+    ? [...new Set(options.warnings.filter((line) => typeof line === "string" && line.trim()))]
+    : [];
+  const stationLoading = Boolean(options?.stationLoading);
 
   const mode = modeInfo?.viewMode === "station" ? "station" : "location";
   const dataMode = modeInfo?.dataMode === "station" ? "station-data" : "model-data";
@@ -2854,23 +2844,27 @@ function renderViewModeBanner(modeInfo, stationObs = null) {
       ? " Data mode: station observations where available, model fallback for missing fields."
       : " Data mode: model gridpoint only.";
 
+  let message = "";
   if (mode === "station") {
     const stationName = modeInfo?.stationName || stationObs?.station_name || "Selected Station";
     const stationId = modeInfo?.stationId || stationObs?.station_id || "";
     const idSuffix = stationId ? ` (${stationId})` : "";
-    viewModeBannerEl.textContent = `Station-Pinned View: all charts are for ${stationName}${idSuffix}.${dataSuffix}`;
-    return;
-  }
-
-  if (stationObs) {
+    message = `Station-Pinned View: all charts are for ${stationName}${idSuffix}.${dataSuffix}`;
+  } else if (stationObs) {
     const stationName = stationObs.station_name || "nearest station";
     const stationId = stationObs.station_id ? ` (${stationObs.station_id})` : "";
     const distanceTxt = Number.isFinite(stationObs.distance_mi) ? `${stationObs.distance_mi.toFixed(1)} mi` : "n/a";
-    viewModeBannerEl.textContent = `Location View: charts are for your chosen point; station cross-check uses ${stationName}${stationId}, ${distanceTxt} away.${dataSuffix}`;
-    return;
+    message = `Location View: charts are for your chosen point; station cross-check uses ${stationName}${stationId}, ${distanceTxt} away.${dataSuffix}`;
+  } else if (stationLoading) {
+    message = `Location View: charts are for your chosen point; nearest weather station cross-check is loading.${dataSuffix}`;
+  } else {
+    message = `Location View: charts are for your chosen point; nearest weather station cross-check is unavailable.${dataSuffix}`;
   }
 
-  viewModeBannerEl.textContent = `Location View: charts are for your chosen point; nearest weather station cross-check is loading.${dataSuffix}`;
+  if (warnings.length) {
+    message += ` Warnings: ${warnings.join(" | ")}`;
+  }
+  viewModeBannerEl.textContent = message;
 }
 
 async function fetchJsonOrThrow(url, signal, options = {}) {
@@ -4525,13 +4519,16 @@ async function loadSeason(lat, lon, options = {}) {
   const loadToken = ++activeLoadToken;
   markStationRequestPending(loadToken);
   const loadWarnings = [];
+  let bannerStationObs = null;
+  let bannerStationLoading = true;
+  let refreshViewModeBanner = () => {};
   const addLoadWarning = (message) => {
     if (typeof message !== "string" || !message.trim()) {
       return;
     }
     if (!loadWarnings.includes(message)) {
       loadWarnings.push(message);
-      renderRequestNotices(loadWarnings);
+      refreshViewModeBanner();
     }
   };
   let stationPendingCleared = false;
@@ -4560,6 +4557,11 @@ async function loadSeason(lat, lon, options = {}) {
     activeLat: lat,
     activeLon: lon
   };
+  refreshViewModeBanner = () =>
+    renderViewModeBanner(modeInfo, bannerStationObs, {
+      stationLoading: bannerStationLoading,
+      warnings: loadWarnings
+    });
   const syncActiveModeOptions = () => {
     activeModeOptions = {
       viewMode: modeInfo.viewMode,
@@ -4591,14 +4593,13 @@ async function loadSeason(lat, lon, options = {}) {
   }
   clearLinkedHoverDay();
   applyChartSources();
-  renderRequestNotices([]);
   metaEl.textContent = "";
   summaryEl.innerHTML = "";
   eventsListEl.innerHTML = "";
   if (stationCheckEl) {
     stationCheckEl.innerHTML = '<p class="station-empty">Fetching nearby station observations...</p>';
   }
-  renderViewModeBanner(modeInfo);
+  refreshViewModeBanner();
 
   const todayUrl = buildTodayUrl(lat, lon);
   const forwardUrl = buildForward7dUrl(lat, lon);
@@ -4746,7 +4747,9 @@ async function loadSeason(lat, lon, options = {}) {
         modeInfo.stationUrl = toHttps(stationTarget.station_url) || "";
       }
       syncActiveModeOptions();
-      renderViewModeBanner(modeInfo, stationCrossCheckResolved?.stationObs || stationTarget);
+      bannerStationObs = stationCrossCheckResolved?.stationObs || stationTarget || bannerStationObs;
+      bannerStationLoading = false;
+      refreshViewModeBanner();
       try {
         const stationHistory = await fetchStationHourlyHistory(
           stationTarget,
@@ -4958,7 +4961,9 @@ async function loadSeason(lat, lon, options = {}) {
     }
     syncActiveModeOptions();
     renderStationCrossCheck(stationCrossCheck, modeInfo);
-    renderViewModeBanner(modeInfo, stationCrossCheck?.stationObs || null);
+    bannerStationObs = stationCrossCheck?.stationObs || bannerStationObs;
+    bannerStationLoading = false;
+    refreshViewModeBanner();
     const stationConfidenceText =
       stationCrossCheck?.confidenceScore !== undefined && stationCrossCheck?.confidenceScore !== null
         ? `${stationCrossCheck.confidenceLabel} (${stationCrossCheck.confidenceScore}/100)`
@@ -4995,7 +5000,8 @@ async function loadSeason(lat, lon, options = {}) {
         message: `Station cross-check failed: ${err instanceof Error ? err.message : "request failure"}`
       };
       renderStationCrossCheck(fallbackPayload, modeInfo);
-      renderViewModeBanner(modeInfo);
+      bannerStationLoading = false;
+      refreshViewModeBanner();
       metaEl.textContent = buildMetaText("n/a");
       setStatus("Loaded (station check unavailable).");
       finishStationPending();
@@ -5005,6 +5011,8 @@ async function loadSeason(lat, lon, options = {}) {
     });
   } catch (err) {
     finishStationPending();
+    bannerStationLoading = false;
+    refreshViewModeBanner();
     throw err;
   }
 }

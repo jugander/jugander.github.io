@@ -452,24 +452,6 @@ button:hover {
   color: var(--muted);
 }
 
-.request-notices {
-  margin-top: 6px;
-  padding: 7px 9px;
-  border: 1px solid #e6c393;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #fff6e9 0%, #ffefda 100%);
-  color: #6f4b20;
-  font-size: 0.79rem;
-}
-
-.request-notices p {
-  margin: 0;
-}
-
-.request-notices p + p {
-  margin-top: 4px;
-}
-
 .view-mode-banner {
   margin-top: 8px;
   padding: 8px 10px;
