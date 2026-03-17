@@ -1,4 +1,5 @@
 const statusEl = document.getElementById("status");
+const requestNoticesEl = document.getElementById("request-notices");
 const formEl = document.getElementById("query-form");
 const metaEl = document.getElementById("meta");
 const summaryEl = document.getElementById("summary");
@@ -33,6 +34,8 @@ const FREEZING_LEVEL_MIN_FT = 0;
 const FREEZING_LEVEL_MAX_FT = 15000;
 const FORECAST_WINDOW_DAYS = 7;
 const SEASON_TICK_STEP_DAYS = 7;
+const OPEN_METEO_FETCH_TIMEOUT_MS = 15000;
+const NWS_FETCH_TIMEOUT_MS = 12000;
 const DEFAULT_LAT = 39.19517;
 const DEFAULT_LON = -120.2367;
 const JU_DEFAULT_LAT = 37.78746;
@@ -280,6 +283,7 @@ let activeLoadToken = 0;
 let activeLoadController = null;
 let activeChartSources = {};
 let activeMetricSourceStats = null;
+const stationPendingTokens = new Set();
 let activeDataMode = "model";
 let activeDisplayTimezone = "UTC";
 let activeModeOptions = {
@@ -532,6 +536,37 @@ function isAbortError(err) {
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function renderRequestNotices(lines = []) {
+  if (!requestNoticesEl) {
+    return;
+  }
+  const unique = [...new Set((Array.isArray(lines) ? lines : []).filter((line) => typeof line === "string" && line.trim()))];
+  if (!unique.length) {
+    requestNoticesEl.hidden = true;
+    requestNoticesEl.innerHTML = "";
+    return;
+  }
+  requestNoticesEl.hidden = false;
+  requestNoticesEl.innerHTML = unique.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+}
+
+function updateStationPendingVisual() {
+  if (!document.body) {
+    return;
+  }
+  document.body.classList.toggle("station-pending", stationPendingTokens.size > 0);
+}
+
+function markStationRequestPending(loadToken) {
+  stationPendingTokens.add(loadToken);
+  updateStationPendingVisual();
+}
+
+function clearStationRequestPending(loadToken) {
+  stationPendingTokens.delete(loadToken);
+  updateStationPendingVisual();
 }
 
 function setStickyMiniHeaderVisible(isVisible) {
@@ -1687,13 +1722,76 @@ async function readErrorTextSafe(res) {
   }
 }
 
-async function fetchSeasonHistory(lat, lon, startDate, endDate, signal) {
+function makeTimeoutError(label, timeoutMs) {
+  const err = new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
+  err.name = "TimeoutError";
+  err.isTimeout = true;
+  return err;
+}
+
+async function fetchWithTimeout(url, fetchOptions = {}, timeoutOptions = {}) {
+  const timeoutMs = Number.isFinite(timeoutOptions.timeoutMs) ? timeoutOptions.timeoutMs : OPEN_METEO_FETCH_TIMEOUT_MS;
+  const label = typeof timeoutOptions.label === "string" && timeoutOptions.label ? timeoutOptions.label : "Request";
+  const onTimeout = typeof timeoutOptions.onTimeout === "function" ? timeoutOptions.onTimeout : null;
+  const parentSignal = fetchOptions?.signal || null;
+  const timeoutController = new AbortController();
+  let timedOut = false;
+
+  const onParentAbort = () => {
+    timeoutController.abort();
+  };
+  if (parentSignal) {
+    if (parentSignal.aborted) {
+      timeoutController.abort();
+    } else {
+      parentSignal.addEventListener("abort", onParentAbort, { once: true });
+    }
+  }
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    timeoutController.abort();
+  }, timeoutMs);
+
+  try {
+    const { signal: _ignoredSignal, ...restFetchOptions } = fetchOptions || {};
+    return await fetch(url, {
+      ...restFetchOptions,
+      signal: timeoutController.signal
+    });
+  } catch (err) {
+    if (timedOut) {
+      const timeoutErr = makeTimeoutError(label, timeoutMs);
+      if (onTimeout) {
+        onTimeout(timeoutErr.message);
+      }
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+    if (parentSignal) {
+      parentSignal.removeEventListener("abort", onParentAbort);
+    }
+  }
+}
+
+async function fetchSeasonHistory(lat, lon, startDate, endDate, signal, options = {}) {
+  const onWarning = typeof options.onWarning === "function" ? options.onWarning : null;
   const candidates = pickHistoryCandidates(lat, lon, startDate, endDate);
   const failures = [];
 
   for (const candidate of candidates) {
     try {
-      const res = await fetch(candidate.url, { signal });
+      const res = await fetchWithTimeout(
+        candidate.url,
+        { signal },
+        {
+          timeoutMs: OPEN_METEO_FETCH_TIMEOUT_MS,
+          label: `Open-Meteo ${candidate.source} history request`,
+          onTimeout: onWarning
+        }
+      );
       if (!res.ok) {
         const body = await readErrorTextSafe(res);
         failures.push(`${candidate.source}: ${res.status} ${body}`);
@@ -1723,10 +1821,19 @@ async function fetchSeasonHistory(lat, lon, startDate, endDate, signal) {
   throw new Error(`History request failed. ${tail}`);
 }
 
-async function fetchArchiveSnowHistory(lat, lon, startDate, endDate, signal) {
+async function fetchArchiveSnowHistory(lat, lon, startDate, endDate, signal, options = {}) {
+  const onWarning = typeof options.onWarning === "function" ? options.onWarning : null;
   const url = buildArchiveSnowHistoryUrl(lat, lon, startDate, endDate);
   try {
-    const res = await fetch(url, { signal });
+    const res = await fetchWithTimeout(
+      url,
+      { signal },
+      {
+        timeoutMs: OPEN_METEO_FETCH_TIMEOUT_MS,
+        label: "Open-Meteo archive snowfall request",
+        onTimeout: onWarning
+      }
+    );
     if (!res.ok) {
       const body = await readErrorTextSafe(res);
       throw new Error(`Archive snowfall request failed. ${res.status} ${body}`);
@@ -2766,11 +2873,21 @@ function renderViewModeBanner(modeInfo, stationObs = null) {
   viewModeBannerEl.textContent = `Location View: charts are for your chosen point; nearest weather station cross-check is loading.${dataSuffix}`;
 }
 
-async function fetchJsonOrThrow(url, signal) {
-  const res = await fetch(url, {
-    signal,
-    headers: { Accept: "application/geo+json, application/ld+json, application/json" }
-  });
+async function fetchJsonOrThrow(url, signal, options = {}) {
+  const label = typeof options.label === "string" && options.label ? options.label : "NWS request";
+  const onWarning = typeof options.onWarning === "function" ? options.onWarning : null;
+  const res = await fetchWithTimeout(
+    url,
+    {
+      signal,
+      headers: { Accept: "application/geo+json, application/ld+json, application/json" }
+    },
+    {
+      timeoutMs: NWS_FETCH_TIMEOUT_MS,
+      label,
+      onTimeout: onWarning
+    }
+  );
   if (!res.ok) {
     const body = await readErrorTextSafe(res);
     throw new Error(`HTTP ${res.status}: ${body}`);
@@ -2914,9 +3031,13 @@ function buildStationConfidencePayload(stationObs, modelNow, modelElevationM) {
   };
 }
 
-async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signal) {
+async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signal, options = {}) {
+  const onWarning = typeof options.onWarning === "function" ? options.onWarning : null;
   try {
-    const points = await fetchJsonOrThrow(`${NWS_API_ROOT}/points/${lat},${lon}`, signal);
+    const points = await fetchJsonOrThrow(`${NWS_API_ROOT}/points/${lat},${lon}`, signal, {
+      label: "NWS points lookup",
+      onWarning
+    });
     const stationsUrlRaw = toHttps(points?.properties?.observationStations);
     if (!stationsUrlRaw) {
       return { message: "NWS station lookup was unavailable for this point." };
@@ -2924,7 +3045,10 @@ async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signa
 
     const stationsUrl = new URL(stationsUrlRaw);
     stationsUrl.searchParams.set("limit", "8");
-    const stationsGeo = await fetchJsonOrThrow(stationsUrl.toString(), signal);
+    const stationsGeo = await fetchJsonOrThrow(stationsUrl.toString(), signal, {
+      label: "NWS nearby stations request",
+      onWarning
+    });
     const features = Array.isArray(stationsGeo?.features) ? stationsGeo.features : [];
     if (!features.length) {
       return { message: "No nearby NWS observation stations were returned." };
@@ -2974,7 +3098,10 @@ async function fetchStationCrossCheck(lat, lon, modelNow, modelElevationM, signa
         const stationElevFt = Number.isFinite(candidate.stationElevFt)
           ? candidate.stationElevFt
           : convertQuantityToFt(candidate.feature?.properties?.elevation);
-        const latest = await fetchJsonOrThrow(`${stationUrl}/observations/latest`, signal);
+        const latest = await fetchJsonOrThrow(`${stationUrl}/observations/latest`, signal, {
+          label: `NWS latest observation request (${stationId})`,
+          onWarning
+        });
         const p = latest?.properties || {};
 
         const timestamp = typeof p.timestamp === "string" ? p.timestamp : null;
@@ -3294,7 +3421,8 @@ function readNextPageUrl(payload) {
   return toHttps(typeof raw === "string" ? raw : null);
 }
 
-async function fetchStationHourlyHistory(stationObs, seasonStart, historyEndDate, timezone, signal) {
+async function fetchStationHourlyHistory(stationObs, seasonStart, historyEndDate, timezone, signal, options = {}) {
+  const onWarning = typeof options.onWarning === "function" ? options.onWarning : null;
   const stationUrlRaw = toHttps(stationObs?.station_url);
   if (!stationUrlRaw) {
     throw new Error("Station URL unavailable for station history fetch.");
@@ -3312,7 +3440,10 @@ async function fetchStationHourlyHistory(stationObs, seasonStart, historyEndDate
   let pageCount = 0;
   while (nextUrl && !seen.has(nextUrl) && pageCount < 40) {
     seen.add(nextUrl);
-    const pageJson = await fetchJsonOrThrow(nextUrl, signal);
+    const pageJson = await fetchJsonOrThrow(nextUrl, signal, {
+      label: `NWS station history page request (${stationObs?.station_id || "station"})`,
+      onWarning
+    });
     const pageFeatures = Array.isArray(pageJson?.features) ? pageJson.features : [];
     features.push(...pageFeatures);
     nextUrl = readNextPageUrl(pageJson);
@@ -4392,6 +4523,25 @@ function renderSunChart(dailyRecords, xRange, forecastStartX = null) {
 
 async function loadSeason(lat, lon, options = {}) {
   const loadToken = ++activeLoadToken;
+  markStationRequestPending(loadToken);
+  const loadWarnings = [];
+  const addLoadWarning = (message) => {
+    if (typeof message !== "string" || !message.trim()) {
+      return;
+    }
+    if (!loadWarnings.includes(message)) {
+      loadWarnings.push(message);
+      renderRequestNotices(loadWarnings);
+    }
+  };
+  let stationPendingCleared = false;
+  const finishStationPending = () => {
+    if (stationPendingCleared) {
+      return;
+    }
+    stationPendingCleared = true;
+    clearStationRequestPending(loadToken);
+  };
   if (activeLoadController) {
     activeLoadController.abort();
   }
@@ -4399,6 +4549,7 @@ async function loadSeason(lat, lon, options = {}) {
   activeLoadController = loadController;
   const { signal } = loadController;
   const isStale = () => signal.aborted || loadToken !== activeLoadToken;
+  try {
   const optionStationUrl = toHttps(typeof options.stationUrl === "string" ? options.stationUrl : "") || "";
   const modeInfo = {
     viewMode: options.viewMode === "station" ? "station" : "location",
@@ -4440,6 +4591,7 @@ async function loadSeason(lat, lon, options = {}) {
   }
   clearLinkedHoverDay();
   applyChartSources();
+  renderRequestNotices([]);
   metaEl.textContent = "";
   summaryEl.innerHTML = "";
   eventsListEl.innerHTML = "";
@@ -4452,12 +4604,21 @@ async function loadSeason(lat, lon, options = {}) {
   const forwardUrl = buildForward7dUrl(lat, lon);
 
   const [historyResult, todayResult, forwardResult, archiveSnowResult] = await Promise.allSettled([
-    fetchSeasonHistory(lat, lon, seasonStart, historyEndDate, signal),
-    fetch(todayUrl, { signal }),
-    fetch(forwardUrl, { signal }),
-    fetchArchiveSnowHistory(lat, lon, seasonStart, todayDate, signal)
+    fetchSeasonHistory(lat, lon, seasonStart, historyEndDate, signal, { onWarning: addLoadWarning }),
+    fetchWithTimeout(todayUrl, { signal }, {
+      timeoutMs: OPEN_METEO_FETCH_TIMEOUT_MS,
+      label: "Open-Meteo today request",
+      onTimeout: addLoadWarning
+    }),
+    fetchWithTimeout(forwardUrl, { signal }, {
+      timeoutMs: OPEN_METEO_FETCH_TIMEOUT_MS,
+      label: "Open-Meteo forecast request",
+      onTimeout: addLoadWarning
+    }),
+    fetchArchiveSnowHistory(lat, lon, seasonStart, todayDate, signal, { onWarning: addLoadWarning })
   ]);
   if (isStale()) {
+    finishStationPending();
     return;
   }
 
@@ -4501,6 +4662,7 @@ async function loadSeason(lat, lon, options = {}) {
     todayHourly = clipRecordsThroughHour(todayHourly, currentHourKey);
   }
   if (isStale()) {
+    finishStationPending();
     return;
   }
 
@@ -4513,6 +4675,7 @@ async function loadSeason(lat, lon, options = {}) {
     modelNow = forwardWindow.modelNow;
   }
   if (isStale()) {
+    finishStationPending();
     return;
   }
 
@@ -4529,7 +4692,9 @@ async function loadSeason(lat, lon, options = {}) {
   const elevationTxt =
     elevationM === null ? "n/a" : `${elevationM.toFixed(0)} m (${elevationFt.toFixed(0)} ft)`;
   updateStickyMiniHeaderContent(lat, lon, elevationFt);
-  const stationCrossCheckPromise = fetchStationCrossCheck(lat, lon, modelNow, elevationM, signal);
+  const stationCrossCheckPromise = fetchStationCrossCheck(lat, lon, modelNow, elevationM, signal, {
+    onWarning: addLoadWarning
+  });
 
   let stationCrossCheckResolved = null;
   let stationHistoryNote = modeInfo.dataMode === "station" ? "pending" : "off";
@@ -4558,6 +4723,7 @@ async function loadSeason(lat, lon, options = {}) {
         };
       }
       if (isStale()) {
+        finishStationPending();
         return;
       }
       if (stationCrossCheckResolved?.stationObs) {
@@ -4582,8 +4748,16 @@ async function loadSeason(lat, lon, options = {}) {
       syncActiveModeOptions();
       renderViewModeBanner(modeInfo, stationCrossCheckResolved?.stationObs || stationTarget);
       try {
-        const stationHistory = await fetchStationHourlyHistory(stationTarget, seasonStart, historyEndDate, timezone, signal);
+        const stationHistory = await fetchStationHourlyHistory(
+          stationTarget,
+          seasonStart,
+          historyEndDate,
+          timezone,
+          signal,
+          { onWarning: addLoadWarning }
+        );
         if (isStale()) {
+          finishStationPending();
           return;
         }
         stationHourlyRecords = stationHistory.hourlyRecords;
@@ -4770,6 +4944,7 @@ async function loadSeason(lat, lon, options = {}) {
 
   const finalizeWithStationPayload = (stationCrossCheck) => {
     if (isStale()) {
+      finishStationPending();
       return;
     }
     if (stationCrossCheck?.stationObs?.station_id && !modeInfo.stationId) {
@@ -4790,6 +4965,7 @@ async function loadSeason(lat, lon, options = {}) {
         : "n/a";
     metaEl.textContent = buildMetaText(stationConfidenceText);
     setStatus("Loaded.");
+    finishStationPending();
     if (loadToken === activeLoadToken) {
       activeLoadController = null;
     }
@@ -4801,6 +4977,7 @@ async function loadSeason(lat, lon, options = {}) {
   }
 
   if (isStale()) {
+    finishStationPending();
     return;
   }
   setStatus("Loaded. Station check pending...");
@@ -4811,6 +4988,7 @@ async function loadSeason(lat, lon, options = {}) {
     })
     .catch((err) => {
       if (isAbortError(err) || isStale()) {
+        finishStationPending();
         return;
       }
       const fallbackPayload = {
@@ -4820,10 +4998,15 @@ async function loadSeason(lat, lon, options = {}) {
       renderViewModeBanner(modeInfo);
       metaEl.textContent = buildMetaText("n/a");
       setStatus("Loaded (station check unavailable).");
+      finishStationPending();
       if (loadToken === activeLoadToken) {
         activeLoadController = null;
       }
     });
+  } catch (err) {
+    finishStationPending();
+    throw err;
+  }
 }
 
 formEl.addEventListener("submit", async (event) => {

@@ -56,6 +56,16 @@ body.beta-host.station-view {
     linear-gradient(180deg, #e6efe8 0%, var(--bg) 46%, #f4f8f5 100%);
 }
 
+body.station-pending,
+body.beta-host.station-pending,
+body.station-view.station-pending,
+body.beta-host.station-view.station-pending {
+  background:
+    radial-gradient(900px 320px at 16% -10%, #f7d7b9 0%, rgba(247, 215, 185, 0) 62%),
+    radial-gradient(760px 260px at 88% -6%, #f0bf93 0%, rgba(240, 191, 147, 0) 60%),
+    linear-gradient(180deg, #e6a97a 0%, #d38c5f 45%, #be754f 100%);
+}
+
 body.station-view .header {
   border-color: rgba(173, 196, 182, 0.8);
   background: linear-gradient(180deg, #f7fcf8 0%, #ecf4ee 100%);
@@ -440,6 +450,24 @@ button:hover {
   margin: 10px 0 0;
   min-height: 20px;
   color: var(--muted);
+}
+
+.request-notices {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border: 1px solid #e6c393;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff6e9 0%, #ffefda 100%);
+  color: #6f4b20;
+  font-size: 0.79rem;
+}
+
+.request-notices p {
+  margin: 0;
+}
+
+.request-notices p + p {
+  margin-top: 4px;
 }
 
 .view-mode-banner {
