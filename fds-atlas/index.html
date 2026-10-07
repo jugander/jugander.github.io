@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Explore confirmed coauthorships among current Yale Faculty of Data Science members, 2023–2026.">
+    <title>Yale FDS Collaboration Atlas</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script defer src="./d3.min.js"></script>
+    <script defer src="./data.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="Yale FDS Collaboration Atlas, back to top">
+          <span class="brand-mark" aria-hidden="true">Y</span>
+          <span class="brand-title">Yale FDS Collaboration Atlas</span>
+        </a>
+        <nav aria-label="Page sections">
+          <a href="#top">Network</a>
+          <a href="#pairs-title">Faculty pairs</a>
+          <a href="#bibliography-title">Bibliography</a>
+          <a href="#methodology-title">Methodology</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="section shell" id="network" aria-label="Collaboration network">
+        <p class="network-intro">This atlas maps confirmed coauthorships among current Yale Faculty of Data Science members in a network, faculty-pair table, and bibliography. It covers shared publications dated January 1, 2023 through October 7, 2026, using the Yale FDS roster and records from Crossref, arXiv, and Europe PMC.</p>
+        <div class="network-layout">
+          <div class="graph-card">
+            <div class="graph-toolbar">
+              <span class="graph-key"><i class="key-line key-cross" aria-hidden="true"></i> Cross-dept <i class="key-line key-within" aria-hidden="true"></i> Within-dept</span>
+            </div>
+            <div class="graph-stage">
+              <svg id="network-svg" viewBox="0 0 1000 660" role="img" aria-label="Force-directed coauthorship network of Yale FDS faculty"></svg>
+              <p id="network-status" class="graph-status" role="status">Loading network…</p>
+              <p id="network-empty" class="graph-empty" hidden>Select a department in the filter to show its faculty.</p>
+            </div>
+          </div>
+          <aside class="detail-card" id="network-detail" aria-label="Network selection details">
+            <div class="detail-toolbar"><button type="button" id="reset-view" class="quiet-button">Reset view and clear selection</button></div>
+            <div class="detail-content" id="network-detail-content" aria-live="polite">
+              <div class="detail-placeholder">
+                <span class="detail-icon" aria-hidden="true">↗</span>
+                <h3>Explore a connection</h3>
+                <p>Hover over a node or edge for details. Click to pin; click blank graph space to clear.</p>
+              </div>
+            </div>
+          </aside>
+          <div class="legend-details" role="group" aria-labelledby="legend-title">
+            <div class="legend-header">
+              <h2 class="legend-title" id="legend-title">Filter the network by school and department <span class="legend-count" aria-live="polite">(<span id="legend-count"></span> · <span id="network-visible-count"></span>)</span></h2>
+              <div class="legend-actions"><button type="button" id="departments-select-all" class="quiet-button">Select all</button><button type="button" id="departments-deselect-all" class="quiet-button">Deselect all</button></div>
+            </div>
+            <div id="department-legend" class="legend-grid"></div>
+            <p class="legend-note">Network only · hover over abbreviations for full department names. Joint-primary faculty appear when either department is selected.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero shell" id="overview" aria-labelledby="overview-title">
+        <div class="hero-heading">
+          <h2 id="overview-title">Faculty collaborations</h2>
+          <p>Yale FDS <span aria-hidden="true">·</span> 2023–2026</p>
+        </div>
+        <div class="stat-grid" aria-label="Dataset at a glance">
+          <div class="stat"><strong id="stat-faculty">—</strong><span>faculty in the map</span></div>
+          <div class="stat"><strong id="stat-pairs">—</strong><span>faculty pairs</span></div>
+          <div class="stat"><strong id="stat-papers">—</strong><span>shared works</span></div>
+          <div class="stat"><strong id="stat-cross">—</strong><span>cross-department pairs</span></div>
+        </div>
+      </section>
+
+      <section class="section shell" id="pairs" aria-labelledby="pairs-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="pairs-title">Faculty pairs</h2>
+            <p>One row per coauthor pair, sorted by the number of distinct shared works.</p>
+          </div>
+          <div class="section-actions">
+            <label class="toggle"><input id="pairs-hide-within" type="checkbox" checked><span class="switch" aria-hidden="true"></span><span>Hide within-department collaborations</span></label>
+          </div>
+        </div>
+        <div class="list-toolbar">
+          <label for="pair-search">Search pairs</label>
+          <input id="pair-search" type="search" placeholder="Faculty or department" autocomplete="off">
+          <span id="pair-results" class="result-count" role="status"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Faculty 1</th><th scope="col">Primary department(s)</th><th scope="col">Faculty 2</th><th scope="col">Primary department(s)</th><th scope="col" class="num">Coauthored papers</th><th scope="col">First year</th><th scope="col">Latest year</th><th scope="col">Relationship</th></tr></thead>
+            <tbody id="pairs-body"></tbody>
+          </table>
+        </div>
+        <p class="table-note">Counts refer to distinct confirmed works, so preprint and journal versions of the same work count once for a pair.</p>
+      </section>
+
+      <section class="section shell" id="bibliography" aria-labelledby="bibliography-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="bibliography-title">Bibliography</h2>
+            <p>Confirmed papers with at least two current FDS faculty, ordered by their most recent indexed publication version.</p>
+          </div>
+          <div class="section-actions">
+            <label class="toggle"><input id="bibliography-hide-within" type="checkbox" checked><span class="switch" aria-hidden="true"></span><span>Hide within-department collaborations</span></label>
+          </div>
+        </div>
+        <div class="list-toolbar">
+          <label for="paper-search">Search papers</label>
+          <input id="paper-search" type="search" placeholder="Title, author, or venue" autocomplete="off">
+          <span id="paper-results" class="result-count" role="status"></span>
+        </div>
+        <div id="bibliography-list" class="bibliography-list"></div>
+      </section>
+
+      <section class="section methodology" id="methodology" aria-labelledby="methodology-title">
+        <div class="shell">
+          <h2 id="methodology-title">Methodology &amp; sources</h2>
+          <div class="method-grid">
+            <div class="method-item"><span>01</span><h3>Scope and time window</h3><p>The network uses the <a href="https://fds.yale.edu/people/">official Yale FDS Members roster</a> as of October 7, 2026. Publications are included when a source dates them from January 1, 2023 through October 7, 2026, inclusive. Nodes show members who appear on at least one confirmed shared work.</p></div>
+            <div class="method-item"><span>02</span><h3>Publication evidence</h3><p>Records came from <a href="https://www.crossref.org/documentation/retrieve-metadata/rest-api/">Crossref</a>, <a href="https://info.arxiv.org/help/api/index.html">arXiv</a>, and <a href="https://europepmc.org/RestfulWebService">Europe PMC</a>. Candidate coauthors were screened against Yale profiles and author identifiers. Distinct bibliographic versions were grouped into intellectual works using identifiers, matching titles, and documented version links.</p></div>
+            <div class="method-item"><span>03</span><h3>Edges and departments</h3><p>Each edge joins two confirmed FDS coauthors. Edge weight is the number of distinct shared works, counted once per work even when several database records or versions exist. The layout finds connected components before force simulation, seeds the largest near the center, and places smaller components to its left or right. Repulsion acts within each component, while a soft vertical guard keeps leaf nodes near the main component; the main component is biased wider than tall. Faculty sharing a primary department start near one another, with a light departmental pull during relaxation. A pair is within-department when its members share at least one primary department; joint primary appointments count in both departments. A paper is cross-department if it contains at least one cross-department FDS pair. School groups follow Yale's <a href="https://medicine.yale.edu/about/departments/">Medicine</a>, <a href="https://fas.yale.edu/about-fas/our-divisions">FAS</a>, <a href="https://engineering.yale.edu/research-and-faculty/research-areas">Engineering</a>, <a href="https://ysph.yale.edu/about-school-of-public-health/">Public Health</a>, and <a href="https://faculty.som.yale.edu/">Management</a> directories. MBB is listed by both FAS and Medicine; for this single-choice legend it appears under Medicine.</p></div>
+            <div class="method-item"><span>04</span><h3>What the controls do</h3><p>Within-department network edges remain visible in gray and interactive. School and department checkboxes filter only network nodes and edges; a partly selected school shows a mixed-state checkbox. Click blank network space to clear a pinned selection. The pair-table and bibliography within-department controls act independently and default to on: the former hides within-department pairs, while the latter hides papers whose FDS coauthor pairs are all within-department. The bibliography sorts by the latest indexed version date, newest first; bold names identify confirmed FDS faculty. When the selected source author list omits a confirmed member, that name is appended with an explanatory tooltip.</p></div>
+          </div>
+          <p class="coverage-note">This is a high-confidence, best-effort indexed dataset, not a complete census of every faculty CV. Sources may omit books and working papers, lag new publications, or split author identities.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="shell"><span>Yale FDS Collaboration Atlas</span></div></footer>
+    <noscript><p class="noscript">This page needs JavaScript to draw the network and populate the lists.</p></noscript>
+  </body>
+</html>
